@@ -1,3 +1,16 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# pytest
+.pytest_cache/
