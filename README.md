@@ -90,7 +90,7 @@ python cli.py [port]        # default: /dev/ttyUSB0
 
 | Method | Description |
 |--------|-------------|
-| `select_vfo(vfo)` | Select VFO `"A"` or `"B"` (see caveat below) |
+| `select_vfo(vfo)` | Select VFO `"A"` or `"B"` |
 | `copy_vfo_a_to_b()` | Copy VFO-A settings to VFO-B |
 
 ### Split
@@ -125,7 +125,7 @@ python cli.py [port]        # default: /dev/ttyUSB0
 | Method | Returns |
 |--------|---------|
 | `get_vfo_status()` | `VFOStatus` — frequency, mode, clarifier offset, RIT, XIT |
-| `get_both_vfo_status()` | `(VFOStatus, VFOStatus)` — VFO-A and VFO-B |
+| `get_both_vfo_status()` | `(VFOStatus, VFOStatus)` — active VFO, then inactive VFO |
 | `read_flags()` | `RadioFlags` — split, clarifier, VFO, TX, priority |
 
 ## Running Tests
@@ -150,5 +150,5 @@ Live tests save and restore radio state automatically. The radio must **not** be
 - **Serial parameters:** 4800 baud, 8 data bits, no parity, 2 stop bits (8N2).
 - **Command format:** Every CAT command is exactly 5 bytes: `[P1][P2][P3][P4][OpCode]`.
 - **Memory channels:** 1–99 (1-indexed, per Hamlib convention).
-- **VFO select caveat:** Hamlib disables the VFO select opcode (`#if 0`) because it has undocumented side-effects on frequencies. Prefer `set_frequency_a`/`set_frequency_b` and `set_mode(..., vfo_b=True)`.
+- **VFO select:** Works despite Hamlib's `#if 0`. The 32-byte status response returns (active, inactive) order after switching — Hamlib misread this VFO swap as frequency corruption. The `read_flags().vfo_b_selected` flag is unreliable; verify VFO identity by frequency instead.
 - **Authoritative reference:** [Hamlib](https://github.com/Hamlib/Hamlib) source — `rigs/yaesu/ft1000mp.h` and `ft1000mp.c`.
