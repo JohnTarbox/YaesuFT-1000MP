@@ -238,9 +238,11 @@ class FT1000MP:
         return _parse_vfo_block(data)
 
     def get_both_vfo_status(self) -> tuple[VFOStatus, VFOStatus]:
-        """Read VFO-A and VFO-B status (32-byte response).
+        """Read both VFO statuses (32-byte response).
 
-        Returns (vfo_a_status, vfo_b_status).
+        Returns (active_vfo_status, inactive_vfo_status).  The radio
+        always puts the currently selected VFO first, so after
+        ``select_vfo('B')`` the first element holds VFO-B's data.
         """
         data = self._serial.send_command(cmd_status_update(0x03), 32)
         return _parse_vfo_block(data[0:16]), _parse_vfo_block(data[16:32])
