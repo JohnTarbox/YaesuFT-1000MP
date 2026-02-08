@@ -14,7 +14,7 @@ class CommandTimeoutError(FT1000MPError):
 
 
 class InvalidFrequencyError(FT1000MPError):
-    """Frequency is outside the valid range (100 kHz - 60 MHz)."""
+    """Frequency is outside the valid range (100 kHz - 30 MHz)."""
 
 
 class InvalidModeError(FT1000MPError):

@@ -24,9 +24,9 @@ FT-1000MP CAT Control Commands:
   clar on|off       Toggle clarifier
   clar <offset_hz>  Set clarifier offset (e.g. clar 600 or clar -300)
   ptt on|off        Transmitter control
-  mem <0-98>        Recall memory channel
-  vfo2mem           Store VFO to memory
-  mem2vfo           Recall memory to VFO
+  mem <1-99>        Recall memory channel
+  vfo2mem <1-99>    Store VFO to memory channel
+  mem2vfo <1-99>    Recall memory channel to VFO
   help              Show this help
   quit              Exit
 """
@@ -180,19 +180,27 @@ def main():
 
                 elif cmd == "mem":
                     if not args:
-                        print("  Usage: mem <0-98>")
+                        print("  Usage: mem <1-99>")
                     else:
                         channel = int(args[0])
                         radio.recall_memory(channel)
                         print(f"  Recalled memory channel {channel}")
 
                 elif cmd == "vfo2mem":
-                    radio.vfo_to_memory()
-                    print("  VFO stored to memory")
+                    if not args:
+                        print("  Usage: vfo2mem <1-99>")
+                    else:
+                        channel = int(args[0])
+                        radio.vfo_to_memory(channel)
+                        print(f"  VFO stored to memory channel {channel}")
 
                 elif cmd == "mem2vfo":
-                    radio.memory_to_vfo()
-                    print("  Memory recalled to VFO")
+                    if not args:
+                        print("  Usage: mem2vfo <1-99>")
+                    else:
+                        channel = int(args[0])
+                        radio.memory_to_vfo(channel)
+                        print(f"  Memory channel {channel} recalled to VFO")
 
                 else:
                     print(f"  Unknown command: {cmd}. Type 'help' for commands.")

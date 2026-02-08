@@ -677,11 +677,9 @@ def saved_state(radio):
     radio_pause()
     radio.set_clarifier(state["clarifier"])
     radio_pause()
-    if state["vfo_b_selected"]:
-        radio.select_vfo("B")
-    else:
-        radio.select_vfo("A")
-    radio_pause()
+    # NOTE: We intentionally do NOT restore VFO-B selection here.
+    # select_vfo() is broken on the FT-1000MP (Hamlib disables it with #if 0)
+    # because it corrupts frequency data. Radio is left on VFO-A.
 
 
 # --- Helper to map sub-mode display names back to base modes ---
