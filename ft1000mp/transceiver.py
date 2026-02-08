@@ -42,7 +42,7 @@ from .serial_port import SerialPort
 
 # Frequency limits for the FT-1000MP
 FREQ_MIN_HZ = 100_000       # 100 kHz
-FREQ_MAX_HZ = 60_000_000    # 60 MHz
+FREQ_MAX_HZ = 30_000_000    # 30 MHz — original FT-1000MP and Mark V
 
 
 @dataclass
@@ -165,7 +165,12 @@ class FT1000MP:
     # -- VFO ---------------------------------------------------------------
 
     def select_vfo(self, vfo: str):
-        """Select VFO A or B. Accepts 'a'/'A' or 'b'/'B'."""
+        """Select VFO A or B. Accepts 'a'/'A' or 'b'/'B'.
+
+        WARNING: Hamlib disables VFO select noting undocumented side-effects
+        on frequencies.  Prefer set_frequency_a/set_frequency_b and
+        set_mode(..., vfo_b=True) to control VFOs independently.
+        """
         vfo_val = VFO.A if vfo.upper() == "A" else VFO.B
         self._serial.send_command(cmd_select_vfo(vfo_val))
 
@@ -194,16 +199,33 @@ class FT1000MP:
     # -- memory ------------------------------------------------------------
 
     def recall_memory(self, channel: int):
-        """Recall memory channel (0-98)."""
-        if not (0 <= channel <= 98):
-            raise ValueError(f"Channel must be 0-98, got {channel}")
+        """Select a memory channel (1-99).
+
+        This switches the radio into memory mode and sets the channel pointer.
+        """
+        if not (1 <= channel <= 99):
+            raise ValueError(f"Channel must be 1-99, got {channel}")
         self._serial.send_command(cmd_recall_memory(channel))
 
-    def vfo_to_memory(self):
-        self._serial.send_command(cmd_vfo_to_memory())
+    def vfo_to_memory(self, channel: int):
+        """Store current VFO to a memory channel (1-99).
 
-    def memory_to_vfo(self):
-        self._serial.send_command(cmd_memory_to_vfo())
+        Call recall_memory(channel) first to select the target channel,
+        then this command to write the VFO data into it.
+        """
+        if not (1 <= channel <= 99):
+            raise ValueError(f"Channel must be 1-99, got {channel}")
+        self._serial.send_command(cmd_vfo_to_memory(channel))
+
+    def memory_to_vfo(self, channel: int):
+        """Transfer a memory channel to VFO (1-99).
+
+        Call recall_memory(channel) first to select the source channel,
+        then this command to copy its contents into the active VFO.
+        """
+        if not (1 <= channel <= 99):
+            raise ValueError(f"Channel must be 1-99, got {channel}")
+        self._serial.send_command(cmd_memory_to_vfo(channel))
 
     # -- status queries ----------------------------------------------------
 
