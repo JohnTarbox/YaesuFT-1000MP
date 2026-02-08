@@ -853,17 +853,16 @@ class TestLiveClarifier:
         flags = radio.read_flags()
         assert flags.clarifier is False
 
-    @pytest.mark.xfail(reason=(
-        "set_clarifier(True) does not set the CLARIFIER flag (bit 0x04). "
-        "May be reading the wrong flag, or test ran after VFO-B select "
-        "corrupted state. Retest after confirming other fixes on hardware."
-    ))
     def test_clarifier_on(self, radio, saved_state):
         radio.set_clarifier(True)
         radio_pause()
         radio_pause()  # extra settle for clarifier toggle
-        flags = radio.read_flags()
-        assert flags.clarifier is True
+        # The 5-byte flags response (read_flags) does NOT report clarifier
+        # state reliably. The clarifier enable is reflected in the 16-byte
+        # status update byte 9 bit 1 (the RIT flag), because on the
+        # FT-1000MP "clarifier" = RIT.
+        status = radio.get_vfo_status()
+        assert status.rit is True
         # clean up
         radio.set_clarifier(False)
         radio_pause()
