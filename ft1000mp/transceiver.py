@@ -110,23 +110,28 @@ class FT1000MP:
 
     # -- context manager ---------------------------------------------------
 
-    def __enter__(self):
+    def __enter__(self) -> "FT1000MP":
         self._serial.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         self._serial.close()
 
-    def open(self):
+    def open(self) -> None:
         self._serial.open()
 
-    def close(self):
+    def close(self) -> None:
         self._serial.close()
 
     # -- validation helpers ------------------------------------------------
 
     @staticmethod
-    def _validate_freq(freq_hz: int):
+    def _validate_freq(freq_hz: int) -> None:
         if not (FREQ_MIN_HZ <= freq_hz <= FREQ_MAX_HZ):
             raise InvalidFrequencyError(
                 f"Frequency {freq_hz} Hz is outside "
@@ -145,26 +150,26 @@ class FT1000MP:
 
     # -- frequency ---------------------------------------------------------
 
-    def set_frequency_a(self, freq_hz: int):
+    def set_frequency_a(self, freq_hz: int) -> None:
         """Set VFO-A frequency in Hz."""
         self._validate_freq(freq_hz)
         self._serial.send_command(cmd_set_freq_a(freq_hz))
 
-    def set_frequency_b(self, freq_hz: int):
+    def set_frequency_b(self, freq_hz: int) -> None:
         """Set VFO-B frequency in Hz."""
         self._validate_freq(freq_hz)
         self._serial.send_command(cmd_set_freq_b(freq_hz))
 
     # -- mode --------------------------------------------------------------
 
-    def set_mode(self, mode_name: str, vfo_b: bool = False):
+    def set_mode(self, mode_name: str, vfo_b: bool = False) -> None:
         """Set operating mode by name (e.g. 'USB', 'CW', 'LSB')."""
         mode_val = self._validate_mode(mode_name)
         self._serial.send_command(cmd_set_mode(mode_val, vfo_b=vfo_b))
 
     # -- VFO ---------------------------------------------------------------
 
-    def select_vfo(self, vfo: str):
+    def select_vfo(self, vfo: str) -> None:
         """Select VFO A or B. Accepts 'a'/'A' or 'b'/'B'.
 
         Note: the 32-byte status response (target 0x03) returns
@@ -174,31 +179,31 @@ class FT1000MP:
         vfo_val = VFO.A if vfo.upper() == "A" else VFO.B
         self._serial.send_command(cmd_select_vfo(vfo_val))
 
-    def copy_vfo_a_to_b(self):
+    def copy_vfo_a_to_b(self) -> None:
         """Copy VFO-A settings to VFO-B."""
         self._serial.send_command(cmd_vfo_a_to_b())
 
     # -- split -------------------------------------------------------------
 
-    def set_split(self, on: bool):
+    def set_split(self, on: bool) -> None:
         self._serial.send_command(cmd_split(on))
 
     # -- clarifier ---------------------------------------------------------
 
-    def set_clarifier(self, on: bool):
+    def set_clarifier(self, on: bool) -> None:
         self._serial.send_command(cmd_clarifier(on))
 
-    def set_clarifier_offset(self, offset_hz: int):
+    def set_clarifier_offset(self, offset_hz: int) -> None:
         self._serial.send_command(cmd_clarifier_offset(offset_hz))
 
     # -- PTT ---------------------------------------------------------------
 
-    def set_ptt(self, on: bool):
+    def set_ptt(self, on: bool) -> None:
         self._serial.send_command(cmd_ptt(on))
 
     # -- memory ------------------------------------------------------------
 
-    def recall_memory(self, channel: int):
+    def recall_memory(self, channel: int) -> None:
         """Select a memory channel (1-99).
 
         This switches the radio into memory mode and sets the channel pointer.
@@ -207,7 +212,7 @@ class FT1000MP:
             raise ValueError(f"Channel must be 1-99, got {channel}")
         self._serial.send_command(cmd_recall_memory(channel))
 
-    def vfo_to_memory(self, channel: int):
+    def vfo_to_memory(self, channel: int) -> None:
         """Store current VFO to a memory channel (1-99).
 
         Call recall_memory(channel) first to select the target channel,
@@ -217,7 +222,7 @@ class FT1000MP:
             raise ValueError(f"Channel must be 1-99, got {channel}")
         self._serial.send_command(cmd_vfo_to_memory(channel))
 
-    def memory_to_vfo(self, channel: int):
+    def memory_to_vfo(self, channel: int) -> None:
         """Transfer a memory channel to VFO (1-99).
 
         Call recall_memory(channel) first to select the source channel,
@@ -235,6 +240,7 @@ class FT1000MP:
         target: 0x02 = current operating data (default).
         """
         data = self._serial.send_command(cmd_status_update(target), 16)
+        assert data is not None
         return _parse_vfo_block(data)
 
     def get_both_vfo_status(self) -> tuple[VFOStatus, VFOStatus]:
@@ -245,6 +251,7 @@ class FT1000MP:
         ``select_vfo('B')`` the first element holds VFO-B's data.
         """
         data = self._serial.send_command(cmd_status_update(0x03), 32)
+        assert data is not None
         return _parse_vfo_block(data[0:16]), _parse_vfo_block(data[16:32])
 
     def read_flags(self) -> RadioFlags:
@@ -256,6 +263,7 @@ class FT1000MP:
         ``get_both_vfo_status()`` for VFO identity.
         """
         data = self._serial.send_command(cmd_read_flags(), 5)
+        assert data is not None
         flags = data[0]
         return RadioFlags(
             split=bool(flags & StatusFlag.SPLIT),

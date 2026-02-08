@@ -38,16 +38,21 @@ class SerialPort:
 
     # -- context manager ---------------------------------------------------
 
-    def __enter__(self):
+    def __enter__(self) -> "SerialPort":
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         self.close()
 
     # -- open / close ------------------------------------------------------
 
-    def open(self):
+    def open(self) -> None:
         if self._ser and self._ser.is_open:
             return
         try:
@@ -64,7 +69,7 @@ class SerialPort:
                 f"Cannot open {self.port}: {exc}"
             ) from exc
 
-    def close(self):
+    def close(self) -> None:
         if self._ser and self._ser.is_open:
             self._ser.close()
         self._ser = None
@@ -91,23 +96,24 @@ class SerialPort:
             CommandTimeoutError: If the radio does not respond after retries.
             SerialConnectionError: If the serial port is not open.
         """
-        if not self.is_open:
+        if not self.is_open or self._ser is None:
             raise SerialConnectionError("Serial port is not open")
 
+        ser = self._ser
         for attempt in range(1, self.retries + 1):
-            self._ser.reset_input_buffer()
-            self._ser.reset_output_buffer()
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
 
             # Write byte-by-byte with inter-byte delay
             for b in cmd:
-                self._ser.write(bytes([b]))
+                ser.write(bytes([b]))
                 time.sleep(INTER_BYTE_DELAY)
             time.sleep(POST_COMMAND_DELAY)
 
             if response_length == 0:
                 return None
 
-            data = self._ser.read(response_length)
+            data = ser.read(response_length)
             if len(data) == response_length:
                 return data
 
