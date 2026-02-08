@@ -167,9 +167,9 @@ class FT1000MP:
     def select_vfo(self, vfo: str):
         """Select VFO A or B. Accepts 'a'/'A' or 'b'/'B'.
 
-        WARNING: Hamlib disables VFO select noting undocumented side-effects
-        on frequencies.  Prefer set_frequency_a/set_frequency_b and
-        set_mode(..., vfo_b=True) to control VFOs independently.
+        Note: the 32-byte status response (target 0x03) returns
+        (active_vfo, inactive_vfo) after switching, not always (A, B).
+        The ``read_flags().vfo_b_selected`` flag is unreliable.
         """
         vfo_val = VFO.A if vfo.upper() == "A" else VFO.B
         self._serial.send_command(cmd_select_vfo(vfo_val))
