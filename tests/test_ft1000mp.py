@@ -810,18 +810,103 @@ class TestLiveVFO:
         flags = radio.read_flags()
         assert flags.vfo_b_selected is False
 
-    @pytest.mark.xfail(reason=(
-        "Hamlib disables VFO select (#if 0) noting it 'changes the "
-        "frequencies in the response'. Known hardware limitation — "
-        "use set_frequency_a/b and set_mode(vfo_b=True) instead."
-    ))
     def test_select_vfo_b(self, radio, saved_state):
+        """Investigate VFO-B select — is this really a hardware limitation?
+
+        The previous xfail blamed Hamlib's ``#if 0`` comment, but:
+        - The other xfail from the same commit was a software bug (clarifier flag)
+        - The ``read_flags()`` 5-byte response has proven unreliable for other fields
+        - Hamlib's comment uses "seems", not a definitive statement
+        - "Changes frequencies" may just be the correct VFO-B frequency appearing
+
+        This test uses multiple verification methods to determine the real cause.
+        """
+        # Step 1: Set VFO-A and VFO-B to known, distinct frequencies
+        freq_a = 14_195_000   # 14.195 MHz (20m)
+        freq_b = 7_074_000    #  7.074 MHz (40m)
+        radio.select_vfo("A")
+        radio_pause()
+        radio.set_frequency_a(freq_a)
+        radio_pause()
+        radio.set_frequency_b(freq_b)
+        radio_pause()
+
+        # Capture baseline: current operating freq should be VFO-A
+        baseline = radio.get_vfo_status(0x02)
+        baseline_both = radio.get_both_vfo_status()
+        baseline_flags = radio.read_flags()
+        radio_pause()
+
+        print(f"\n--- BASELINE (VFO-A selected) ---")
+        print(f"  Current freq:  {baseline.frequency_hz:,} Hz")
+        print(f"  VFO-A freq:    {baseline_both[0].frequency_hz:,} Hz")
+        print(f"  VFO-B freq:    {baseline_both[1].frequency_hz:,} Hz")
+        print(f"  Flags raw:     0x{baseline_flags.raw:02X}")
+        print(f"  vfo_b_selected: {baseline_flags.vfo_b_selected}")
+
+        # Step 2: Send VFO-B select command
         radio.select_vfo("B")
         radio_pause()
-        radio_pause()  # extra settle for VFO switch
-        flags = radio.read_flags()
-        assert flags.vfo_b_selected is True
-        # restore
+        radio_pause()  # extra settle time
+        radio_pause()  # even more settle (4 seconds total after command)
+
+        # Step 3: Read all status through multiple methods
+        after_flags = radio.read_flags()
+        radio_pause()
+        after_current = radio.get_vfo_status(0x02)
+        radio_pause()
+        after_both = radio.get_both_vfo_status()
+
+        print(f"\n--- AFTER select_vfo('B') ---")
+        print(f"  Current freq:  {after_current.frequency_hz:,} Hz")
+        print(f"  VFO-A freq:    {after_both[0].frequency_hz:,} Hz")
+        print(f"  VFO-B freq:    {after_both[1].frequency_hz:,} Hz")
+        print(f"  Flags raw:     0x{after_flags.raw:02X}")
+        print(f"  vfo_b_selected: {after_flags.vfo_b_selected}")
+
+        # Step 4: Diagnose what happened
+        freq_switched = abs(after_current.frequency_hz - freq_b) < 100
+        flag_reports_b = after_flags.vfo_b_selected is True
+        # The 32-byte response returns (active_vfo, inactive_vfo), not
+        # always (A, B).  After switching to VFO-B the first block holds
+        # VFO-B's freq and the second holds VFO-A's — i.e. they swap.
+        both_swapped = (
+            abs(after_both[0].frequency_hz - freq_b) < 100
+            and abs(after_both[1].frequency_hz - freq_a) < 100
+        )
+        freqs_corrupted = not both_swapped and (
+            abs(after_both[0].frequency_hz - freq_a) > 100
+            or abs(after_both[1].frequency_hz - freq_b) > 100
+        )
+
+        print(f"\n--- DIAGNOSIS ---")
+        print(f"  Frequency switched to VFO-B?  {freq_switched}")
+        print(f"  Flag reports VFO-B?           {flag_reports_b}")
+        print(f"  32-byte block swapped?        {both_swapped}")
+        print(f"  Frequencies corrupted?        {freqs_corrupted}")
+
+        if freq_switched and both_swapped:
+            print("  >>> VFO switch WORKS. 32-byte response returns "
+                  "(active, inactive) — not always (A, B).")
+        if not flag_reports_b:
+            print("  >>> vfo_b_selected flag is unreliable (like clarifier)")
+
+        # The VFO actually switched — current operating freq is VFO-B's
+        assert freq_switched, (
+            f"VFO-B select did not switch operating frequency. "
+            f"Expected ~{freq_b:,} Hz, got {after_current.frequency_hz:,} Hz. "
+            f"Flags vfo_b_selected={after_flags.vfo_b_selected}, "
+            f"raw=0x{after_flags.raw:02X}"
+        )
+        # The 32-byte block swaps to (active, inactive) order — not corruption
+        assert not freqs_corrupted, (
+            f"VFO frequencies corrupted after select. "
+            f"Block[0]: {after_both[0].frequency_hz:,} Hz, "
+            f"Block[1]: {after_both[1].frequency_hz:,} Hz, "
+            f"Expected swap to ({freq_b:,}, {freq_a:,}) or stay ({freq_a:,}, {freq_b:,})"
+        )
+
+        # Restore VFO-A selection
         radio.select_vfo("A")
         radio_pause()
 
