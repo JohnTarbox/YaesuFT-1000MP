@@ -1,0 +1,13 @@
+[project]
+name = "ft1000mp"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["pyserial>=3.5"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: tests that require a live radio on /dev/ttyUSB0",
+]
