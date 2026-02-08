@@ -250,10 +250,10 @@ class FT1000MP:
     def read_flags(self) -> RadioFlags:
         """Read the 5-byte status flags.
 
-        NOTE: The ``clarifier`` field from this response is unreliable.
-        The 5-byte flags response (opcode 0xFA) does not consistently
-        report clarifier state.  To check whether the clarifier (RIT) is
-        enabled, use ``get_vfo_status().rit`` instead.
+        NOTE: The ``clarifier`` and ``vfo_b_selected`` fields from this
+        response are unreliable.  Use ``get_vfo_status().rit`` for
+        clarifier state, and compare frequencies from
+        ``get_both_vfo_status()`` for VFO identity.
         """
         data = self._serial.send_command(cmd_read_flags(), 5)
         flags = data[0]
