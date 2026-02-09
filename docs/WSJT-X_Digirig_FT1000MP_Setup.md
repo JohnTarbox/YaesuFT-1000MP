@@ -1,8 +1,8 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
 Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF),
-VarAC, and flrig for digital modes on the Yaesu FT-1000MP using a Digirig
-Mobile interface connected to the rear panel PACKET connector.
+VarAC, flrig, and Hamlib rigctld for digital modes on the Yaesu FT-1000MP
+using a Digirig Mobile interface connected to the rear panel PACKET connector.
 
 ---
 
@@ -23,11 +23,12 @@ Mobile interface connected to the rear panel PACKET connector.
 13. [Pat Winlink Setup (Linux)](#pat-winlink-setup-linux)
 14. [VarAC Setup](#varac-setup)
 15. [flrig Rig Control Middleware](#flrig-rig-control-middleware)
-16. [Audio Level Calibration](#audio-level-calibration)
-17. [Testing the Setup](#testing-the-setup)
-18. [Operating Tips](#operating-tips)
-19. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
-20. [Troubleshooting](#troubleshooting)
+16. [Hamlib rigctld Rig Control Daemon](#hamlib-rigctld-rig-control-daemon)
+17. [Audio Level Calibration](#audio-level-calibration)
+18. [Testing the Setup](#testing-the-setup)
+19. [Operating Tips](#operating-tips)
+20. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+21. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1060,6 +1061,274 @@ With flrig running and connected to the radio:
 
 ---
 
+## Hamlib rigctld Rig Control Daemon
+
+[rigctld](https://hamlib.sourceforge.net/html/rigctld.1.html) is a TCP network
+daemon from the **Hamlib** project that connects to your radio's serial port
+and exposes rig control over a TCP socket. Like flrig, it solves the serial
+port sharing problem, but rigctld is a command-line daemon with no GUI --
+ideal for headless systems, Raspberry Pi setups, and Linux servers.
+
+### Why Use rigctld?
+
+- **Serial port sharing:** rigctld holds the serial connection and multiplexes
+  access to multiple client applications simultaneously over TCP.
+- **No GUI required:** Runs as a lightweight daemon, perfect for headless or
+  remote operation (e.g., Raspberry Pi controlling the radio).
+- **Standardized interface:** Applications connect using Hamlib's text protocol
+  on TCP port 4532 -- they do not need to know the radio's native CAT protocol.
+- **Remote access:** rigctld can listen on all network interfaces, allowing
+  applications on other computers to control the radio.
+- **Systemd integration:** Can run as a Linux service that starts automatically
+  at boot.
+
+### rigctld vs. flrig
+
+| Feature | rigctld | flrig |
+|---------|---------|-------|
+| Interface | Command-line daemon (headless) | GUI application with rig display |
+| Protocol | Hamlib text protocol over TCP (port 4532) | XML-RPC over HTTP (port 12345) |
+| Resource usage | Minimal (no GUI) | Higher (GUI, web server) |
+| Ease of setup | Command-line configuration | GUI configuration |
+| Headless/remote | Ideal (designed for it) | Possible but less natural |
+| Best for | Linux, Raspberry Pi, headless, remote | Windows desktop, users who want a GUI |
+
+Both support the FT-1000MP. Choose based on whether you want a GUI or a daemon.
+
+### Installing rigctld
+
+rigctld is part of the Hamlib package.
+
+- **Windows:** Download Hamlib from
+  [github.com/Hamlib/Hamlib/releases](https://github.com/Hamlib/Hamlib/releases).
+  Extract the archive; `rigctld.exe` and `rigctl.exe` are in the `bin` folder.
+- **Linux:**
+  ```bash
+  # Debian/Ubuntu
+  sudo apt install libhamlib-utils
+
+  # Fedora
+  sudo dnf install hamlib
+  ```
+
+Verify installation:
+```bash
+rigctld --version
+```
+
+### Hamlib Model Numbers
+
+| Radio | Model ID |
+|-------|----------|
+| FT-1000MP | 1024 |
+| MARK-V FT-1000MP | 1004 |
+| MARK-V Field FT-1000MP | 1025 |
+
+Confirm with:
+```bash
+rigctld -l | grep -i 1000mp
+```
+
+### Starting rigctld for the FT-1000MP
+
+**Basic startup (Linux):**
+```bash
+rigctld -m 1024 -r /dev/ttyUSB0 -s 4800 -C stop_bits=2
+```
+
+**With Digirig (CP210x) -- RTS must be forced off:**
+```bash
+rigctld -m 1024 -r /dev/ttyUSB0 -s 4800 -C stop_bits=2,rts_state=OFF
+```
+
+**Windows:**
+```cmd
+rigctld -m 1024 -r COM3 -s 4800 -C stop_bits=2,rts_state=OFF
+```
+
+**With debug output (useful for troubleshooting):**
+```bash
+rigctld -m 1024 -r /dev/ttyUSB0 -s 4800 -C stop_bits=2,rts_state=OFF -vvvv
+```
+
+### rigctld Command-Line Options
+
+| Option | Purpose | FT-1000MP Value |
+|--------|---------|-----------------|
+| `-m` | Hamlib model number | `1024` (or `1004` / `1025`) |
+| `-r` | Serial port device | `/dev/ttyUSB0` or `COMx` |
+| `-s` | Baud rate | `4800` |
+| `-t` | TCP listening port | `4532` (default) |
+| `-T` | Listening IP address | `127.0.0.1` (localhost) or `0.0.0.0` (all interfaces) |
+| `-C` | Backend configuration | `stop_bits=2,rts_state=OFF` |
+| `-v` | Increase verbosity (stackable) | `-vvvv` for maximum debug |
+
+> **Critical (Digirig CP210x):** Always include `rts_state=OFF` in the `-C`
+> options. The CP210x asserts RTS high by default, which blocks CAT writes.
+> FTDI-based cables do not need this.
+
+### Connecting WSJT-X to rigctld
+
+1. Start rigctld as described above.
+2. In WSJT-X, go to **Settings > Radio**.
+3. Set **Rig** to **Hamlib NET rigctl**.
+4. Set **Network Server** to `127.0.0.1:4532`.
+5. Set **PTT Method** to **CAT**.
+6. Set **Split Operation** to **Fake It**.
+7. Click **Test CAT** -- should turn green.
+
+> WSJT-X does not need to know the COM port, baud rate, or stop bits when
+> using rigctld. All serial communication is handled by the daemon.
+
+### Connecting Fldigi to rigctld
+
+1. Start rigctld as described above.
+2. In Fldigi, go to **Configure > Rig Control > Hamlib** tab.
+3. Set **Rig** to **Hamlib NET rigctl** (may appear as "NET rigctl (Beta)").
+4. Set **Device** to `127.0.0.1:4532`.
+5. Adjust polling settings if needed:
+   - **Retries:** 5
+   - **Write delay:** 50 ms (increase if multiple apps share rigctld)
+6. Click **Initialize** -- should turn green.
+
+> Disable RigCAT and hardware PTT tabs when using rigctld. Only one rig
+> control method should be active.
+
+### Connecting JS8Call to rigctld
+
+1. Start rigctld as described above.
+2. In JS8Call, go to **File > Settings > Radio**.
+3. Set **Rig** to **Hamlib NET rigctl**.
+4. Set **Network Server** to `127.0.0.1:4532`.
+5. Set **PTT Method** to **CAT**.
+6. Click **Test CAT** -- should turn green.
+
+### Testing with the rigctl Command-Line Client
+
+`rigctl` is the interactive companion to `rigctld`. Use it to test the
+connection or query the radio from the command line.
+
+**Connect to a running rigctld instance:**
+```bash
+rigctl -m 2 -r 127.0.0.1:4532
+```
+
+Model `-m 2` is the special "NET rigctl" model that connects over TCP.
+
+**One-shot commands (no interactive mode):**
+```bash
+# Get current frequency
+rigctl -m 2 -r localhost:4532 f
+
+# Set frequency to 14.074 MHz (FT8)
+rigctl -m 2 -r localhost:4532 F 14074000
+
+# Set mode to USB
+rigctl -m 2 -r localhost:4532 M USB 0
+
+# Key up PTT
+rigctl -m 2 -r localhost:4532 T 1
+
+# Release PTT
+rigctl -m 2 -r localhost:4532 T 0
+```
+
+**Interactive mode commands:**
+
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| `get_freq` | `f` | Get current frequency |
+| `set_freq` | `F` | Set frequency (Hz) |
+| `get_mode` | `m` | Get current mode |
+| `set_mode` | `M` | Set mode and passband |
+| `get_ptt` | `t` | Get PTT state |
+| `set_ptt` | `T` | Set PTT (0=RX, 1=TX) |
+| `get_rit` | `j` | Get RIT offset |
+| `set_rit` | `J` | Set RIT offset (Hz) |
+| `get_vfo` | `v` | Get active VFO |
+| `set_vfo` | `V` | Set active VFO |
+| `quit` | `q` | Exit rigctl |
+
+**Direct serial test (bypassing rigctld):**
+```bash
+rigctl -m 1024 -r /dev/ttyUSB0 -s 4800 -C stop_bits=2,rts_state=OFF
+```
+
+This talks directly to the radio without the daemon. Useful for verifying
+serial communication before starting rigctld.
+
+### Running rigctld as a Linux Service (systemd)
+
+Create `/etc/systemd/system/rigctld.service`:
+
+```ini
+[Unit]
+Description=Hamlib rigctld rig control daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rigctld -m 1024 -r /dev/ttyUSB0 -s 4800 -t 4532 -C stop_bits=2,rts_state=OFF
+Restart=on-failure
+RestartSec=60
+User=rigctld
+Group=dialout
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Set it up:
+```bash
+# Create a dedicated user
+sudo useradd -r -s /usr/sbin/nologin rigctld
+sudo usermod -aG dialout rigctld
+
+# Enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable rigctld
+sudo systemctl start rigctld
+
+# Check status
+systemctl status rigctld
+```
+
+### Stable Device Names with udev (Linux)
+
+If you have multiple USB-serial devices, `/dev/ttyUSB0` may change between
+reboots. Create a udev rule for a stable symlink.
+
+Create `/etc/udev/rules.d/99-hamradio.rules`:
+```
+# Digirig CP210x -> /dev/digirig
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="digirig"
+```
+
+Reload rules:
+```bash
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+Then use `-r /dev/digirig` in your rigctld command.
+
+### Running rigctld on Windows at Startup
+
+Create a batch file (e.g., `C:\hamradio\start_rigctld.bat`):
+```bat
+@echo off
+START /MIN "rigctld" "C:\hamlib\bin\rigctld.exe" -m 1024 -r COM3 -s 4800 -t 4532 -C stop_bits=2,rts_state=OFF
+```
+
+To autostart, place a shortcut to the batch file in:
+```
+%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+```
+
+Or use **Task Scheduler** to create a task triggered "At log on" that runs
+the batch file.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -1357,6 +1626,32 @@ menu settings.
 6. **Try re-init:** Click Init again after making changes. flrig does not
    auto-retry.
 
+### rigctld Fails to Start or No Communication
+
+1. **Serial port in use:** Close any other application using the COM port
+   (WSJT-X, Fldigi, flrig, etc.) before starting rigctld.
+2. **Wrong model number:** Use `-m 1024` for the standard FT-1000MP, `-m 1004`
+   for the Mark V, or `-m 1025` for the Mark V Field.
+3. **Stop bits:** Must include `-C stop_bits=2` on the command line.
+4. **RTS (Digirig):** Must include `rts_state=OFF` in the `-C` options.
+5. **Permissions (Linux):** The user running rigctld must be in the `dialout`
+   group: `sudo usermod -aG dialout $USER` (log out and back in).
+6. **Radio power:** The radio must be on before starting rigctld.
+7. **Debug output:** Add `-vvvv` to see detailed communication. Look for
+   "IO error" or "timeout" messages.
+
+### WSJT-X/JS8Call Cannot Connect to rigctld
+
+1. **rigctld running:** Verify rigctld is running (`ps aux | grep rigctld` on
+   Linux, or check Task Manager on Windows).
+2. **Rig selection:** Must be **Hamlib NET rigctl** in the radio settings.
+3. **Network server:** Must be `127.0.0.1:4532` (or whatever port you used
+   with `-t`).
+4. **Firewall:** On Windows, ensure the firewall allows connections on port
+   4532.
+5. **Port conflict:** Another service may be using port 4532. Try a different
+   port with `-t 4533` and update the client accordingly.
+
 ### WSJT-X/JS8Call Cannot Connect to flrig
 
 1. **flrig running:** Ensure flrig is running and the Init button is
@@ -1484,6 +1779,29 @@ JS8CALL VIA FLRIG
   PTT:        CAT
   (no serial port config needed)
 
+RIGCTLD (command line)
+  Start:      rigctld -m 1024 -r /dev/ttyUSB0 -s 4800 -C stop_bits=2,rts_state=OFF
+  Windows:    rigctld -m 1024 -r COM3 -s 4800 -C stop_bits=2,rts_state=OFF
+  TCP port:   4532 (default)
+  Mark V:     Use -m 1004 instead of -m 1024
+
+WSJT-X VIA RIGCTLD
+  Rig:        Hamlib NET rigctl
+  Network:    127.0.0.1:4532
+  PTT:        CAT
+  (no serial port config needed)
+
+FLDIGI VIA RIGCTLD
+  Rig:        Hamlib NET rigctl
+  Device:     127.0.0.1:4532
+  (disable RigCAT and hardware PTT)
+
+JS8CALL VIA RIGCTLD
+  Rig:        Hamlib NET rigctl
+  Network:    127.0.0.1:4532
+  PTT:        CAT
+  (no serial port config needed)
+
 VARAC (Settings > RIG control & VARA Configuration)
   PTT Method:     CAT
   COM Port:       COMx (Digirig CP210x)
@@ -1541,6 +1859,15 @@ AUDIO LEVELS (all applications)
 - [flrig Help / User Guide](http://www.w1hkj.com/flrig-help/)
 - [flrig with WSJT-X Integration](http://www.w1hkj.com/flrig-help/flrig_with_wsjt-x.html)
 - [flrig Source Code (SourceForge)](https://sourceforge.net/projects/fldigi/files/flrig/)
+
+### Hamlib / rigctld
+- [Hamlib Project (GitHub)](https://github.com/Hamlib/Hamlib)
+- [Hamlib Releases & Downloads](https://github.com/Hamlib/Hamlib/releases)
+- [rigctld Man Page](https://hamlib.sourceforge.net/html/rigctld.1.html)
+- [rigctl Man Page](https://hamlib.sourceforge.net/html/rigctl.1.html)
+- [Hamlib Supported Radios Wiki](https://github.com/Hamlib/Hamlib/wiki/Supported-Radios)
+- [Hamlib FAQ](https://github.com/Hamlib/Hamlib/wiki/FAQ)
+- [DrGerg: Hamlib, Log4OM2, Fldigi, JS8Call & WSJT-X Together](https://www.drgerg.com/hamlib-et-al.html)
 
 ### VarAC
 - [VarAC Website & Download](https://www.varac-hamradio.com/)
