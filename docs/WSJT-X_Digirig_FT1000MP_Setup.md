@@ -24,7 +24,8 @@ connected to the rear panel PACKET connector.
 14. [Audio Level Calibration](#audio-level-calibration)
 15. [Testing the Setup](#testing-the-setup)
 16. [Operating Tips](#operating-tips)
-17. [Troubleshooting](#troubleshooting)
+17. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+18. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -900,6 +901,69 @@ will get warm during prolonged operation.
 
 ---
 
+## Backing Up Radio Settings (Clone Mode)
+
+After configuring all the menu settings for digital modes, it's a good idea to
+back up your radio's configuration so you can restore it if needed.
+
+### What Clone Mode Does
+
+The FT-1000MP supports **clone mode**, which transfers the entire radio
+configuration (all menu settings, memory channels, and operating parameters)
+over the CAT serial port. This allows you to:
+
+- **Back up** your radio's configuration to a file on your computer
+- **Restore** a saved configuration back to the radio
+- **Maintain multiple profiles** (e.g., contest settings vs. digital mode
+  settings) and swap between them
+- **Transfer settings** between two identical FT-1000MP radios
+
+### Important Limitations
+
+- Clone mode is a **bulk transfer** of the entire configuration -- you cannot
+  read or write individual menu items via CAT commands.
+- Clone mode must be **initiated from the radio's front panel** -- it cannot be
+  started remotely via CAT.
+- The FT-1000MP CAT protocol has **no opcode for reading or writing individual
+  menu settings or EEPROM addresses**. This is a limitation of the radio's
+  firmware, unlike some newer Yaesu radios (FT-817/857/897) that have
+  undocumented EEPROM read commands.
+- During normal CAT operation, you can read the radio's current frequency,
+  mode, VFO status, and meter readings, but not menu configuration.
+
+### Hidden Menu Access
+
+The FT-1000MP has a hidden service menu (items 9-0 through 9-8) accessible by
+holding **FAST** and **LOCK** simultaneously while powering on. This menu
+includes Collins filter adjustments, IF gain settings, and CPU self-check. Use
+with caution -- incorrect values can degrade radio performance.
+
+### Software for Clone Management
+
+[SuperControl](https://www.supercontrol.de/cat/us/featuresft1000mp.php)
+(commercial, Windows) is the primary software for managing FT-1000MP clone
+files. It can:
+
+- Read clone data from the radio
+- Edit settings on the computer
+- Write clone data back to the radio
+- Archive multiple configuration profiles
+
+### Reset Procedures
+
+If you need to restore factory defaults without a clone backup:
+
+| Reset Level | Key Combination at Power-On   | Effect                              |
+|-------------|-------------------------------|--------------------------------------|
+| Level 1     | Hold **SUB (CE)** + **ENT**   | Resets memories to defaults (menus preserved) |
+| Level 3     | Hold **29/0**                 | Full factory reset (all settings)    |
+
+> **Caution:** Level 3 reset erases all menu settings, memory channels, and
+> custom configurations. You will need to re-enter all menu settings from
+> the [Radio Menu Configuration](#radio-menu-configuration) section.
+
+---
+
 ## Troubleshooting
 
 ### CAT Control Fails (Test CAT turns red)
@@ -1102,7 +1166,8 @@ AUDIO LEVELS (all applications)
 - [N1EU: FT-1000MP Setup Page](https://www.qsl.net/n1eu/Yaesu/MPsetup.htm)
 - [FT-1000MP Operating Manual (PDF)](http://www.foxtango.org/ft-library/FT-Library/nineties/FT-1000MP%20Operating%20Manual.pdf)
 
-### Software
+### Software & Utilities
+- [SuperControl: FT-1000MP Clone & CAT Software](https://www.supercontrol.de/cat/us/featuresft1000mp.php)
 - [WSJT-X User Guide](https://wsjt.sourceforge.io/wsjtx-doc/wsjtx-main-2.6.1.html)
 - [JS8Call Website](http://js8call.com/)
 - [JS8Call Signal ID Wiki (Frequencies & Specs)](https://www.sigidwiki.com/wiki/JS8)
