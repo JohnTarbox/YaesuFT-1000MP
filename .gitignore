@@ -14,3 +14,6 @@ build/
 
 # pytest
 .pytest_cache/
+
+# Windows Zone.Identifier ADS files
+*:Zone.Identifier
