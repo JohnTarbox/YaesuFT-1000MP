@@ -208,13 +208,14 @@ Instead of entering values manually, use the SStu-u preset:
 
 ### Activating USER Mode
 
-After configuring menu 8-6, exit the menu and:
+After configuring menu 8-6, exit the menu and press the dedicated **USER**
+button on the front panel. The display should show **PKT** with the **LSB**
+indicator lit. The radio is now operating in USB internally (per your Menu 8-6
+settings) despite the LSB indicator.
 
-1. Press and **hold** the **PKT** button for approximately 2 seconds.
-2. The display should show **PKT** with the **LSB** indicator lit.
-3. This is now operating in USB internally despite the LSB indicator.
-
-> Do **not** short-press PKT (that selects standard packet mode, not USER mode).
+> The **USER** button directly activates PKT USER mode. The **PKT** button
+> cycles through the standard PKT sub-modes (PKT-L, PKT-FM) and does **not**
+> enter USER mode.
 
 ---
 
@@ -1765,7 +1766,7 @@ failed decodes (too low) or distorted/spurious signals (too high).
    - **20m:** 14.074 MHz
    - **40m:** 7.074 MHz
    - **17m:** 18.100 MHz
-2. Ensure the radio is in **PKT USER** mode (hold PKT button).
+2. Ensure the radio is in **PKT USER** mode (press the **USER** button).
 3. You should see signals on the WSJT-X waterfall display.
 4. After a decode cycle (15 seconds for FT8), decoded stations should appear.
 
@@ -1912,7 +1913,7 @@ If you need to restore factory defaults without a clone backup:
 
 ### No Audio on Waterfall
 
-1. **PKT USER mode:** Ensure you held the PKT button (not short-pressed). The
+1. **PKT USER mode:** Ensure you pressed the **USER** button (not PKT). The
    PACKET jack is silent in USB/LSB/CW modes.
 2. **Correct audio device:** Verify WSJT-X input is set to the Digirig's USB
    audio device, not your computer's built-in microphone.
@@ -2099,7 +2100,7 @@ RADIO SETTINGS
   Menu 8-6:  PAc-Lo / 0 / 1.500 / 453.500 / 1.500 / 453.500 / 0 / oFF
   Menu 6-1:  RTTY polarity = reversed
   Menu 3-0:  F-diSPly = cArriEr  (optional)
-  Activate:  Hold PKT button 2 seconds (USER mode)
+  Activate:  Press USER button (USER mode)
   MIC GAIN:  10 o'clock
 
 WSJT-X RADIO TAB
