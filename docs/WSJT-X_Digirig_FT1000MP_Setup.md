@@ -1,8 +1,8 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
-Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF), and
-VarAC for digital modes on the Yaesu FT-1000MP using a Digirig Mobile interface
-connected to the rear panel PACKET connector.
+Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF),
+VarAC, and flrig for digital modes on the Yaesu FT-1000MP using a Digirig
+Mobile interface connected to the rear panel PACKET connector.
 
 ---
 
@@ -22,11 +22,12 @@ connected to the rear panel PACKET connector.
 12. [Winlink Express + VARA HF Setup (Windows)](#winlink-express--vara-hf-setup-windows)
 13. [Pat Winlink Setup (Linux)](#pat-winlink-setup-linux)
 14. [VarAC Setup](#varac-setup)
-15. [Audio Level Calibration](#audio-level-calibration)
-16. [Testing the Setup](#testing-the-setup)
-17. [Operating Tips](#operating-tips)
-18. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
-19. [Troubleshooting](#troubleshooting)
+15. [flrig Rig Control Middleware](#flrig-rig-control-middleware)
+16. [Audio Level Calibration](#audio-level-calibration)
+17. [Testing the Setup](#testing-the-setup)
+18. [Operating Tips](#operating-tips)
+19. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+20. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -925,6 +926,140 @@ Most activity is on **20m** (daytime) and **40m** (evening/night).
 
 ---
 
+## flrig Rig Control Middleware
+
+[flrig](http://www.w1hkj.com/flrig-help/) is a rig control application that
+acts as a middleware server between your radio and multiple digital mode
+applications. Instead of each application opening the serial port directly,
+flrig holds the serial connection and serves rig data to clients via XMLRPC.
+
+### Why Use flrig?
+
+- **Serial port sharing:** Only one application can open a COM port at a time.
+  Without flrig, you must close WSJT-X before opening Fldigi or JS8Call. With
+  flrig, all applications connect to flrig's XMLRPC server simultaneously.
+- **Single point of control:** Frequency, mode, and PTT are managed in one
+  place. All connected clients see the same rig state.
+- **No start order dependency:** Client applications can start and stop in any
+  order without affecting the serial connection to the radio.
+- **Consistent behavior:** flrig handles the CAT protocol details, so all
+  client applications get the same reliable rig control.
+
+### Installing flrig
+
+- **Windows:** Download the installer from
+  [w1hkj.com/files/flrig](http://www.w1hkj.com/files/flrig/).
+- **Linux:** Install from your distribution's package manager:
+  ```bash
+  # Debian/Ubuntu
+  sudo apt install flrig
+
+  # Fedora
+  sudo dnf install flrig
+  ```
+  Or build from source at
+  [sourceforge.net/projects/fldigi/files/flrig](https://sourceforge.net/projects/fldigi/files/flrig/).
+
+### Configuring flrig for the FT-1000MP
+
+1. Launch flrig.
+2. Open **Config > Setup > Transceiver**.
+3. Select **Yaesu FT-1000MP** from the transceiver dropdown.
+   - If you have a Mark V or Mark V Field, select **Yaesu FT-1000MP-A** instead.
+4. Set the serial port:
+   - **Windows:** COMx (Digirig CP210x port)
+   - **Linux:** `/dev/ttyUSB0`
+5. Set serial parameters:
+   - **Baud rate:** 4800
+   - **Stop bits:** 2
+6. Configure PTT:
+   - **PTT via CAT** is the simplest option (flrig sends CAT PTT commands).
+   - Alternatively, select **RTS** if you prefer hardware PTT via the
+     CP210x RTS pin. If using RTS for PTT, ensure the **RTS for CAT** option
+     is **unchecked** (since the CP210x RTS must be held low for CAT to work).
+7. Click **Init** (or **Initialize**).
+   - The Init button turns from **red to black/green** on successful connection.
+   - The flrig main window should now display the radio's current frequency
+     and mode.
+
+> **Important (Digirig CP210x):** If using PTT via CAT, flrig handles RTS
+> internally. If you experience CAT communication problems, check that flrig
+> is not asserting RTS high. In the Config > Setup dialog, ensure **RTS/CTS
+> flow control** is disabled and **RTS** is not checked unless you specifically
+> need it for PTT.
+
+### flrig XMLRPC Server
+
+flrig runs an XMLRPC server on **localhost:12345** by default. This is the
+interface that client applications connect to. The server starts automatically
+when flrig launches -- no additional configuration is needed.
+
+To verify the server is running, you can test from a browser or command line:
+```
+http://localhost:12345
+```
+
+### Connecting WSJT-X to flrig
+
+1. Open WSJT-X **Settings > Radio**.
+2. Set **Rig** to **FLRig FLRig** (not the direct Yaesu FT-1000MP entry).
+3. Leave all serial port settings at their defaults -- WSJT-X communicates
+   with flrig over XMLRPC, not directly via serial.
+4. Set **PTT Method** to **CAT** (flrig relays PTT to the radio).
+5. Click **Test CAT** -- it should turn green immediately if flrig is running.
+6. Click **Test PTT** -- the radio should key up.
+
+> **Note:** When using flrig, WSJT-X does not need to know the COM port, baud
+> rate, or stop bits. All serial communication is handled by flrig.
+
+### Connecting Fldigi to flrig
+
+1. Open Fldigi **Configure > Rig Control**.
+2. Go to the **flrig** tab.
+3. Check **Use flrig** to enable the connection.
+4. Fldigi connects to flrig on localhost:12345 automatically.
+5. Close the configuration dialog.
+6. The flrig icon or status in Fldigi's toolbar should indicate a successful
+   connection. Frequency changes in Fldigi will appear on the radio.
+
+> **Note:** When using flrig, disable Hamlib and RigCAT in Fldigi to avoid
+> conflicts. Only one rig control method should be active at a time.
+
+### Connecting JS8Call to flrig
+
+1. Open JS8Call **File > Settings > Radio**.
+2. Set **Rig** to **FLRig FLRig**.
+3. Leave serial settings at defaults.
+4. Set **PTT Method** to **CAT**.
+5. Click **Test CAT** -- should turn green.
+
+JS8Call uses the same flrig XMLRPC interface as WSJT-X.
+
+### Connecting VarAC to flrig
+
+VarAC does not have native flrig support. When using VarAC, you have two
+options:
+
+1. **Close flrig** and let VarAC control the radio directly via CAT commands
+   (see the [VarAC Setup](#varac-setup) section).
+2. **Use OmniRig** (Windows) as an intermediary if you need shared access.
+
+### Running Multiple Applications Simultaneously
+
+With flrig running and connected to the radio:
+
+1. Start flrig **first** and verify the Init button is green/black.
+2. Start any combination of WSJT-X, Fldigi, and JS8Call.
+3. All applications will show the current frequency and can control the radio.
+4. PTT from any application will key up the radio.
+5. Applications can be started and stopped in any order.
+
+> **Caution:** While multiple applications can connect simultaneously, only
+> **one application should transmit at a time**. Running WSJT-X and Fldigi
+> simultaneously is fine for monitoring, but ensure only one has TX enabled.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -1042,7 +1177,7 @@ will get warm during prolonged operation.
 
 ### Mode Selection
 
-- WSJT-X, JS8Call, Fldigi, and VARA all handle modulation/demodulation in software.
+- WSJT-X, JS8Call, Fldigi, VARA, and VarAC all handle modulation/demodulation in software.
 - The radio just needs to be in **PKT USER** mode (which provides USB passthrough).
 - Do **not** change the radio's mode while digital software is running.
 
@@ -1206,6 +1341,34 @@ menu settings.
    FT-1000MP variants.
 3. **Baud rate:** Must be **4800** to match the radio's fixed CAT speed.
 
+### flrig Init Button Stays Red
+
+1. **Serial port:** Verify the correct COM port is selected in Config > Setup.
+   Only one application can hold the serial port -- close any other CAT software
+   (WSJT-X, Fldigi, etc.) before initializing flrig.
+2. **Transceiver selection:** Ensure you selected **Yaesu FT-1000MP** (or
+   **FT-1000MP-A** for Mark V). The wrong rig selection will send incorrect
+   CAT commands.
+3. **Baud rate and stop bits:** Must be **4800 baud, 2 stop bits**.
+4. **RTS issue (Digirig):** If RTS/CTS flow control is enabled or RTS is
+   asserted, CAT writes may be blocked. Disable flow control and uncheck RTS
+   (unless using RTS for PTT).
+5. **Radio power:** The radio must be powered on before clicking Init.
+6. **Try re-init:** Click Init again after making changes. flrig does not
+   auto-retry.
+
+### WSJT-X/JS8Call Cannot Connect to flrig
+
+1. **flrig running:** Ensure flrig is running and the Init button is
+   green/black (connected to radio).
+2. **Rig selection:** Must be **FLRig FLRig** in the radio settings, not the
+   direct Yaesu entry.
+3. **XMLRPC port:** flrig defaults to port 12345. If you changed it in flrig,
+   the client applications may not find it.
+4. **Firewall:** On Windows, ensure the firewall is not blocking localhost
+   connections on port 12345.
+5. **Multiple flrig instances:** Only one instance of flrig should be running.
+
 ### VarAC PTT or CAT Not Working
 
 1. **Stop bits:** The FT-1000MP requires **2 stop bits**. VarAC defaults
@@ -1298,6 +1461,29 @@ PAT WINLINK (Linux)
   Hamlib rig model:  1024 (FT-1000MP)
   Serial address:    /dev/ttyUSB0
 
+FLRIG (Config > Setup > Transceiver)
+  Rig:        Yaesu FT-1000MP (or FT-1000MP-A for Mark V)
+  Serial:     COMx / /dev/ttyUSB0
+  Baud:       4800
+  Stop Bits:  2
+  PTT:        CAT (or RTS)
+  XMLRPC:     localhost:12345 (automatic)
+
+WSJT-X VIA FLRIG
+  Rig:        FLRig FLRig
+  PTT:        CAT
+  (no serial port config needed)
+
+FLDIGI VIA FLRIG
+  Configure > Rig Control > flrig tab
+  Use flrig:  Checked
+  (disable Hamlib and RigCAT)
+
+JS8CALL VIA FLRIG
+  Rig:        FLRig FLRig
+  PTT:        CAT
+  (no serial port config needed)
+
 VARAC (Settings > RIG control & VARA Configuration)
   PTT Method:     CAT
   COM Port:       COMx (Digirig CP210x)
@@ -1349,6 +1535,12 @@ AUDIO LEVELS (all applications)
 - [Fldigi Beginners' Guide](http://www.w1hkj.com/beginners.html)
 - [Fldigi XML Rig Definitions (FT-1000MP)](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/)
 - [Hamlib Supported Radios](https://github.com/Hamlib/Hamlib/wiki/Supported-Radios)
+
+### flrig
+- [flrig Website & Downloads](http://www.w1hkj.com/files/flrig/)
+- [flrig Help / User Guide](http://www.w1hkj.com/flrig-help/)
+- [flrig with WSJT-X Integration](http://www.w1hkj.com/flrig-help/flrig_with_wsjt-x.html)
+- [flrig Source Code (SourceForge)](https://sourceforge.net/projects/fldigi/files/flrig/)
 
 ### VarAC
 - [VarAC Website & Download](https://www.varac-hamradio.com/)
