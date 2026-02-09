@@ -1,7 +1,7 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
-Complete guide for configuring WSJT-X, Fldigi, JS8Call, and Winlink (VARA HF)
-for digital modes on the Yaesu FT-1000MP using a Digirig Mobile interface
+Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF), and
+VarAC for digital modes on the Yaesu FT-1000MP using a Digirig Mobile interface
 connected to the rear panel PACKET connector.
 
 ---
@@ -21,11 +21,12 @@ connected to the rear panel PACKET connector.
 11. [Winlink Overview](#winlink-overview)
 12. [Winlink Express + VARA HF Setup (Windows)](#winlink-express--vara-hf-setup-windows)
 13. [Pat Winlink Setup (Linux)](#pat-winlink-setup-linux)
-14. [Audio Level Calibration](#audio-level-calibration)
-15. [Testing the Setup](#testing-the-setup)
-16. [Operating Tips](#operating-tips)
-17. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
-18. [Troubleshooting](#troubleshooting)
+14. [VarAC Setup](#varac-setup)
+15. [Audio Level Calibration](#audio-level-calibration)
+16. [Testing the Setup](#testing-the-setup)
+17. [Operating Tips](#operating-tips)
+18. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -778,6 +779,152 @@ initiate connections to RMS gateways.
 
 ---
 
+## VarAC Setup
+
+VarAC is a real-time HF chat application for keyboard-to-keyboard QSOs,
+built on the VARA HF modem. Unlike FT8 or JS8Call which use timed
+transmission slots, VarAC operates more like an instant messenger --
+you type a message and it transmits immediately. It supports CQ calling,
+direct connect, store-and-forward messaging, and file transfers.
+
+VarAC uses the same VARA HF modem as Winlink, so if you have already
+configured VARA HF (see [Winlink Express + VARA HF Setup](#winlink-express--vara-hf-setup-windows)),
+much of the setup is already done.
+
+> **Windows only:** VarAC is a Windows application. On Linux, it can be
+> run under Wine.
+
+### Step 1: Install VarAC
+
+1. Download VarAC from [varac-hamradio.com](https://www.varac-hamradio.com/download).
+2. Extract to a dedicated folder (e.g. `C:\VarAC`) -- do **not** run from
+   the zip file.
+3. Ensure [VARA HF](https://rosmodem.wordpress.com/) is already installed.
+4. Launch VarAC and enter your callsign.
+
+### Step 2: Configure VARA HF Modem
+
+If you have not already configured VARA HF for Winlink, set it up now.
+The VARA HF configuration is shared between VarAC and Winlink Express.
+
+Go to VARA HF **Settings > SoundCard**:
+
+| Setting         | Value                                          |
+|-----------------|------------------------------------------------|
+| Device Input    | **Microphone (USB Audio Device)** (Digirig)    |
+| Device Output   | **Speakers (USB Audio Device)** (Digirig)      |
+
+Go to VARA HF **Settings > PTT**:
+
+| Setting         | Value                                          |
+|-----------------|------------------------------------------------|
+| PTT             | **COM**                                        |
+| Port            | COM port of CP210x (e.g. COM3)                 |
+| PTT Pin         | **RTS**                                        |
+
+### Step 3: Configure VarAC RIG Control
+
+Go to **Settings > RIG control & VARA Configuration**.
+
+VarAC offers several RIG control methods. For the FT-1000MP with Digirig,
+use the **CAT** method with a custom command file:
+
+#### PTT Configuration (Upper Left)
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| PTT Method       | **CAT**                            |
+| COM Port         | COM port of CP210x (e.g. COM3)     |
+| Baud Rate        | **4800**                           |
+| Data Bits        | **8**                              |
+| Stop Bits        | **2**                              |
+| Parity           | **None**                           |
+
+> **Critical:** The FT-1000MP requires **2 stop bits**. If you leave this
+> at the default of 1, PTT and CAT commands will not work.
+
+#### CAT Command File for FT-1000MP
+
+VarAC uses a CAT command file to send radio-specific hex commands. Create
+or edit the file to include FT-1000MP commands:
+
+| Parameter    | Value              | Notes                              |
+|--------------|--------------------|------------------------------------|
+| CmdType      | **HEX**            | FT-1000MP uses hex commands        |
+| PTTOn        | **000000010F**     | PTT on (opcode 0x0F, param 0x01)  |
+| PTTOff       | **000000000F**     | PTT off (opcode 0x0F, param 0x00) |
+
+> **Mode commands:** The FT-1000MP should already be in PKT USER mode
+> (set manually on the radio). Comment out any Mode commands in the CAT
+> file with a semicolon (`;`) to prevent VarAC from attempting to change
+> the radio's mode, which may not work correctly via CAT for this radio.
+
+#### Frequency Control
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| Frequency Control | **CAT** (same port)               |
+
+> If CAT frequency control is unreliable, you can set it to **None** and
+> tune the radio manually. VarAC will still function for chat, but you
+> will need to change bands by hand.
+
+#### VARA HF Modem Path
+
+| Setting              | Value                              |
+|----------------------|------------------------------------|
+| VARAHF main file path | **C:\VARA\VARA.exe** (adjust)     |
+| VARAHF main port     | **8300** (default)                 |
+
+Click **Save and Exit** after configuring.
+
+### Step 4: Test the Connection
+
+1. Use the **TEST** buttons in the RIG control settings to verify PTT and
+   frequency control work correctly.
+2. PTT test: the radio should key up when you click TEST.
+3. Frequency test: the radio should change frequency when you click TEST.
+
+### VarAC Calling Frequencies
+
+VarAC uses dedicated calling frequencies separate from FT8/JS8Call. When
+you call CQ, VarAC encodes a "slot" frequency where the actual QSO will
+take place, so the calling frequency stays clear.
+
+| Band | Calling Frequency | Notes                          |
+|------|-------------------|--------------------------------|
+| 160m | 1.995 MHz         |                                |
+| 80m  | 3.595 MHz         | Evening/night                  |
+| 60m  | 5.355 MHz         | Channel restrictions may apply |
+| 40m  | 7.105 MHz         | Primary evening/night          |
+| 30m  | 10.133 MHz        | 24-hour                        |
+| 20m  | 14.105 MHz        | Primary daytime                |
+| 17m  | 18.107 MHz        | Daytime                        |
+| 15m  | 21.105 MHz        | Daytime                        |
+| 12m  | 24.927 MHz        | Daytime                        |
+| 10m  | 28.105 MHz        | Daytime/sporadic E             |
+
+Most activity is on **20m** (daytime) and **40m** (evening/night).
+
+> Additional calling frequencies can be added by editing the
+> `VarAC_frequencies.conf` file in the VarAC installation directory.
+
+### VarAC Operating Tips
+
+- **Bandwidth:** All VarAC QSOs use 500 Hz bandwidth by default. Always
+  use 500 Hz on calling frequencies and slots.
+- **Power:** 25-50W is typical. VarAC is a 100% duty cycle mode during
+  transmit.
+- **QSY:** After calling CQ and connecting with a station, VarAC
+  automatically QSYs both stations to a slot frequency for the QSO.
+  Right-click QSY buttons to listen on the destination before moving.
+- **File transfers:** Keep files small (5-10 KB max in high speed,
+  1-2 KB in low speed). Do not send large files over HF.
+- **Sniffer:** Before calling CQ, use the sniffer feature to verify
+  your chosen slot is clear of other traffic.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -1059,6 +1206,18 @@ menu settings.
    FT-1000MP variants.
 3. **Baud rate:** Must be **4800** to match the radio's fixed CAT speed.
 
+### VarAC PTT or CAT Not Working
+
+1. **Stop bits:** The FT-1000MP requires **2 stop bits**. VarAC defaults
+   to 1. Change this in Settings > RIG control & VARA Configuration.
+2. **CmdType:** Must be **HEX** for the FT-1000MP (not TEXT).
+3. **PTT commands:** Use `000000010F` (on) and `000000000F` (off).
+4. **Mode commands:** Comment out any Mode commands in the CAT command
+   file with `;` -- the radio should be in PKT USER mode manually.
+5. **COM port conflict:** If VARA HF is also using the same COM port for
+   PTT, there may be a conflict. Ensure VarAC and VARA are not both
+   trying to open the same serial port simultaneously.
+
 ---
 
 ## Quick Reference Card
@@ -1139,6 +1298,20 @@ PAT WINLINK (Linux)
   Hamlib rig model:  1024 (FT-1000MP)
   Serial address:    /dev/ttyUSB0
 
+VARAC (Settings > RIG control & VARA Configuration)
+  PTT Method:     CAT
+  COM Port:       COMx (Digirig CP210x)
+  Baud:           4800
+  Data Bits:      8
+  Stop Bits:      2 (critical!)
+  Parity:         None
+  CmdType:        HEX
+  PTTOn:          000000010F
+  PTTOff:         000000000F
+  Freq Control:   CAT (same port)
+  VARA path:      C:\VARA\VARA.exe
+  VARA port:      8300
+
 AUDIO LEVELS (all applications)
   OS Recording:   Start at 20%, adjust to stay below red
   OS Playback:    ~80%
@@ -1176,6 +1349,13 @@ AUDIO LEVELS (all applications)
 - [Fldigi Beginners' Guide](http://www.w1hkj.com/beginners.html)
 - [Fldigi XML Rig Definitions (FT-1000MP)](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/)
 - [Hamlib Supported Radios](https://github.com/Hamlib/Hamlib/wiki/Supported-Radios)
+
+### VarAC
+- [VarAC Website & Download](https://www.varac-hamradio.com/)
+- [VarAC Quick Start Guide](https://www.varac-hamradio.com/forum/manuals-troubleshooting/varac-quick-start-guide)
+- [VarAC CAT Command File & Customization Guide](https://www.varac-hamradio.com/forum/manuals-troubleshooting/rig-control-cat-command-file-cat-customization-guide)
+- [VarAC with FT-1000MP Mark V (Forum)](https://www.varac-hamradio.com/forum/varac-hf-discussion-forum/varac-and-yaesu-ft-1000mp-mark-v-no-ptt-or-cat)
+- [VarAC Installation and Configuration (K0PIR)](https://k0pir.us/varac-installation-and-configuration-with-vara-hf/)
 
 ### Winlink
 - [Winlink Express Download](https://downloads.winlink.org/User%20Programs/)
