@@ -1,8 +1,8 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
-Complete guide for configuring WSJT-X and Fldigi for digital modes on the Yaesu
-FT-1000MP using a Digirig Mobile interface connected to the rear panel PACKET
-connector.
+Complete guide for configuring WSJT-X, Fldigi, JS8Call, and Winlink (VARA HF)
+for digital modes on the Yaesu FT-1000MP using a Digirig Mobile interface
+connected to the rear panel PACKET connector.
 
 ---
 
@@ -18,10 +18,13 @@ connector.
 8. [Fldigi Audio Settings](#fldigi-audio-settings)
 9. [JS8Call Radio Settings](#js8call-radio-settings)
 10. [JS8Call Audio Settings](#js8call-audio-settings)
-11. [Audio Level Calibration](#audio-level-calibration)
-12. [Testing the Setup](#testing-the-setup)
-13. [Operating Tips](#operating-tips)
-14. [Troubleshooting](#troubleshooting)
+11. [Winlink Overview](#winlink-overview)
+12. [Winlink Express + VARA HF Setup (Windows)](#winlink-express--vara-hf-setup-windows)
+13. [Pat Winlink Setup (Linux)](#pat-winlink-setup-linux)
+14. [Audio Level Calibration](#audio-level-calibration)
+15. [Testing the Setup](#testing-the-setup)
+16. [Operating Tips](#operating-tips)
+17. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -508,6 +511,272 @@ Testing section. JS8Call also has a built-in **Timing** tab (enable via
 
 ---
 
+## Winlink Overview
+
+Winlink is a global radio email system that allows sending and receiving email
+over HF and VHF radio. It works by connecting to RMS (Radio Message Server)
+gateway stations that relay your messages to/from the internet.
+
+The system requires three components:
+
+1. **Winlink client** -- Winlink Express (Windows) or Pat (Linux/macOS)
+2. **Digital modem** -- VARA HF (recommended), ARDOP, or Packet
+3. **Radio + interface** -- FT-1000MP + Digirig (what we're setting up)
+
+> **Important:** Winlink/VARA HF operates in **USB mode**, not PKT mode.
+> Unlike WSJT-X, Fldigi, and JS8Call which use the PACKET connector in PKT USER
+> mode, VARA HF sends audio through the same PACKET connector but the radio
+> should be in **PKT USER** mode (which is internally USB). The same menu 8-6
+> configuration used for the other applications works here too.
+
+> **Windows vs Linux:** VARA HF is Windows-only software. On Linux, you can
+> run it under Wine, or use ARDOP (open-source alternative) with the Pat
+> Winlink client. VARA HF provides significantly better performance than ARDOP.
+
+---
+
+## Winlink Express + VARA HF Setup (Windows)
+
+### Step 1: Install Software
+
+1. Download and install [Winlink Express](https://downloads.winlink.org/User%20Programs/).
+2. Download and install [VARA HF](https://rosmodem.wordpress.com/) (free
+   trial version available; paid version removes speed limit).
+3. On first launch of Winlink Express, create your account with your callsign,
+   password, grid square, and recovery email.
+
+### Step 2: Configure VARA HF Modem
+
+Launch VARA HF (it can also be launched automatically by Winlink Express).
+
+#### VARA HF Soundcard Settings
+
+Go to **Settings > SoundCard**:
+
+| Setting         | Value                                          |
+|-----------------|------------------------------------------------|
+| Device Input    | **Microphone (USB Audio Device)** (Digirig)    |
+| Device Output   | **Speakers (USB Audio Device)** (Digirig)      |
+
+> If you renamed the Digirig audio devices, select the renamed entries.
+
+#### VARA HF PTT Settings
+
+Go to **Settings > PTT**:
+
+| Setting         | Value                                          |
+|-----------------|------------------------------------------------|
+| PTT             | **COM**                                        |
+| Port            | COM port of CP210x (e.g. COM3)                 |
+| PTT Pin         | **RTS**                                        |
+
+> The Digirig uses RTS to trigger PTT. When VARA asserts RTS, the Digirig
+> closes the PTT circuit via the DIN-5 pin 3 on the PACKET connector.
+
+#### VARA HF Network Settings
+
+Go to **Settings > VARA Setup**:
+
+| Setting              | Value       |
+|----------------------|-------------|
+| VARA HF Command Port | **8300**    |
+| VARA HF Data Port    | **8301**    |
+
+These are the defaults. Winlink Express connects to VARA via these TCP ports.
+
+### Step 3: Configure Winlink Express Radio Setup
+
+1. In Winlink Express, select **VARA HF Winlink** from the session dropdown
+   (upper right).
+2. Click **Open Session**.
+3. Go to **Settings > Radio Setup** (or click the gear icon).
+
+#### Radio Setup Dialog
+
+| Setting              | Value                                       |
+|----------------------|---------------------------------------------|
+| Radio Model          | **Yaesu FT-1000MP Mk V**                   |
+| Radio Control Port   | COM port of CP210x (e.g. COM3)              |
+| Baud Rate            | **4800**                                    |
+| Enable RTS           | **Unchecked** (for CAT -- see note below)   |
+| Enable DTR           | **Unchecked**                               |
+| PTT Port             | *(leave blank -- VARA handles PTT)*         |
+
+> **Radio model selection:** Winlink Express lists the FT-1000MP as
+> **"Yaesu FT-1000MP Mk V"** in the radio model dropdown. This selection
+> works for the original FT-1000MP, Mark V, and Mark V Field variants.
+
+> **RTS for CAT vs PTT:** In Winlink Express's Radio Setup, the "Enable RTS"
+> checkbox controls the serial port RTS line for CAT communication, **not**
+> PTT. Since the CP210x asserts RTS high by default (which blocks CAT writes),
+> leave this **unchecked**. PTT is handled separately by VARA HF through its
+> own COM port RTS configuration.
+
+#### VARA TNC Setup
+
+Go to **Settings > VARA TNC Setup**:
+
+| Setting              | Value                              |
+|----------------------|------------------------------------|
+| TNC Host             | **localhost** (or 127.0.0.1)       |
+| Virtual Command Port | **8300**                           |
+| Modem Path           | **C:\VARA\VARA.exe** (adjust path) |
+
+### Step 4: Connect to an RMS Gateway
+
+1. In the VARA HF Winlink session window, click **Channel Selection**.
+2. A list of available RMS gateway stations appears, showing callsign,
+   frequency, distance, and last update time.
+3. Sort by distance to find nearby stations.
+4. Double-click a station to select it.
+5. The radio should automatically tune to the gateway's frequency via CAT
+   control. Verify the dial frequency matches.
+6. Click **Start** to initiate the connection.
+7. VARA will handle the handshake, and Winlink will transfer any pending
+   messages.
+
+### Winlink Operating Frequencies
+
+Winlink RMS gateways operate across the HF bands. Common frequency ranges:
+
+| Band | Frequency Range   | Notes                          |
+|------|-------------------|--------------------------------|
+| 80m  | 3.580-3.600 MHz   | Night, regional               |
+| 40m  | 7.083-7.100 MHz   | Evening, medium range          |
+| 30m  | 10.130-10.148 MHz  | 24-hour, good propagation      |
+| 20m  | 14.095-14.112 MHz  | Daytime, long range            |
+| 17m  | 18.100-18.110 MHz  | Daytime, long range            |
+
+> Exact frequencies are determined by the RMS gateway station. Use the
+> Channel Selection tool to find active gateways and their frequencies.
+
+---
+
+## Pat Winlink Setup (Linux)
+
+Pat is an open-source, cross-platform Winlink client that runs natively on
+Linux. It supports VARA (via Wine), ARDOP, AX.25, and Telnet.
+
+### Install Pat
+
+Download from [getpat.io](https://getpat.io/) or install via Go:
+
+```bash
+# Debian/Ubuntu (download .deb from GitHub releases):
+sudo dpkg -i pat_*_linux_amd64.deb
+
+# Or install from source:
+go install github.com/la5nta/pat@latest
+```
+
+### Configure Pat
+
+Pat stores its configuration in `~/.config/pat/config.json`. On first run,
+it creates a default config. Edit it with your callsign and settings:
+
+```bash
+pat configure    # Opens config in your editor
+```
+
+Key configuration fields:
+
+```json
+{
+  "mycall": "YOUR_CALLSIGN",
+  "secure_login_password": "your_winlink_password",
+  "locator": "FN42ab",
+  "hamlib_rigs": {
+    "ft1000mp": {
+      "address": "/dev/ttyUSB0",
+      "network": "serial",
+      "rig_model": 1024
+    }
+  }
+}
+```
+
+> **Hamlib rig model numbers:**
+>
+> | Radio                    | Model Number |
+> |--------------------------|--------------|
+> | FT-1000MP (original)     | **1024**     |
+> | Mark V FT-1000MP         | **1004**     |
+> | Mark V Field FT-1000MP   | **1025**     |
+
+### ARDOP Setup (Open-Source HF Modem)
+
+ARDOP is the open-source alternative to VARA HF. While slower, it runs
+natively on Linux without Wine.
+
+1. Install ARDOP:
+   ```bash
+   # Download from GitHub releases:
+   # https://github.com/pflarue/ardop
+   ```
+
+2. Configure Pat for ARDOP in `config.json`:
+   ```json
+   {
+     "ardop": {
+       "addr": "localhost:8515",
+       "arq_bandwidth": {
+         "Forced": false,
+         "Max": 2000
+       },
+       "rig": "ft1000mp",
+       "ptt_ctrl": true
+     }
+   }
+   ```
+
+3. Start ARDOP with the Digirig audio device:
+   ```bash
+   ardopcf 8515 plughw:CARD=Device,DEV=0 plughw:CARD=Device,DEV=0
+   ```
+
+4. Start Pat and connect:
+   ```bash
+   pat http                    # Start web UI at http://localhost:8080
+   pat connect ardop://RMS_CALLSIGN?freq=14095000
+   ```
+
+### VARA HF via Wine (Higher Performance)
+
+VARA HF can run under Wine on Linux with good results:
+
+1. Install Wine and VARA HF following the guide at
+   [Winlink and VARA on Linux](https://winlink.org/content/winlink_express_and_vara_linux_mac_updated_instructions).
+2. Configure Pat to use VARA instead of ARDOP:
+   ```json
+   {
+     "vara": {
+       "host": "localhost",
+       "cmdPort": 8300,
+       "dataPort": 8301,
+       "rig": "ft1000mp",
+       "ptt_ctrl": true
+     }
+   }
+   ```
+
+3. Start VARA under Wine, then connect via Pat:
+   ```bash
+   pat connect varahf://RMS_CALLSIGN?freq=14095000
+   ```
+
+### Pat Web Interface
+
+Pat provides a browser-based UI for composing and reading messages:
+
+```bash
+pat http    # Opens web UI at http://localhost:8080
+```
+
+From the web interface you can compose messages, view your inbox, and
+initiate connections to RMS gateways.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -625,9 +894,9 @@ will get warm during prolonged operation.
 
 ### Mode Selection
 
-- WSJT-X, JS8Call, and Fldigi all handle modulation/demodulation in software.
+- WSJT-X, JS8Call, Fldigi, and VARA all handle modulation/demodulation in software.
 - The radio just needs to be in **PKT USER** mode (which provides USB passthrough).
-- Do **not** change the radio's mode while WSJT-X is running.
+- Do **not** change the radio's mode while digital software is running.
 
 ---
 
@@ -703,6 +972,29 @@ menu settings.
 3. **Power:** Ensure you are actually transmitting RF (check power meter, not
    just TX indicator).
 
+### VARA HF Won't Connect to RMS Gateway
+
+1. **Frequency mismatch:** Verify the radio's dial frequency matches the
+   gateway frequency shown in Winlink's Channel Selection.
+2. **PTT not working:** Check VARA's PTT settings (Settings > PTT): must be
+   COM port with RTS pin. Verify the correct COM port is selected.
+3. **Audio routing:** Confirm VARA's soundcard settings point to the Digirig
+   USB audio device, not the computer's built-in audio.
+4. **Gateway offline:** RMS gateways go offline. Try a different gateway.
+   Sort by distance and pick one that was recently updated.
+5. **VARA version:** Ensure you have a current version of VARA HF installed.
+   Older versions may have compatibility issues.
+
+### Winlink Express Radio Control Not Working
+
+1. **COM port conflict:** VARA HF and Winlink Express may both try to access
+   the same COM port. VARA handles PTT via its own COM connection. If there
+   is a conflict, ensure only one application is accessing the CAT port.
+2. **Radio model:** Select **"Yaesu FT-1000MP Mk V"** in the radio setup
+   dropdown. If your exact model is not listed, this entry works for all
+   FT-1000MP variants.
+3. **Baud rate:** Must be **4800** to match the radio's fixed CAT speed.
+
 ---
 
 ## Quick Reference Card
@@ -763,6 +1055,26 @@ JS8CALL AUDIO TAB
   Output:     USB Audio Device (Digirig)
   Notify:     Built-in speakers (NOT Digirig)
 
+VARA HF (Settings > SoundCard)
+  Device Input:   Microphone (USB Audio Device) [Digirig]
+  Device Output:  Speakers (USB Audio Device) [Digirig]
+
+VARA HF (Settings > PTT)
+  PTT:        COM
+  Port:       COMx (Digirig CP210x)
+  PTT Pin:    RTS
+
+WINLINK EXPRESS (Radio Setup)
+  Radio Model:       Yaesu FT-1000MP Mk V
+  Radio Control Port: COMx (Digirig CP210x)
+  Baud Rate:         4800
+  Enable RTS:        Unchecked
+  Enable DTR:        Unchecked
+
+PAT WINLINK (Linux)
+  Hamlib rig model:  1024 (FT-1000MP)
+  Serial address:    /dev/ttyUSB0
+
 AUDIO LEVELS (all applications)
   OS Recording:   Start at 20%, adjust to stay below red
   OS Playback:    ~80%
@@ -799,3 +1111,13 @@ AUDIO LEVELS (all applications)
 - [Fldigi Beginners' Guide](http://www.w1hkj.com/beginners.html)
 - [Fldigi XML Rig Definitions (FT-1000MP)](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/)
 - [Hamlib Supported Radios](https://github.com/Hamlib/Hamlib/wiki/Supported-Radios)
+
+### Winlink
+- [Winlink Express Download](https://downloads.winlink.org/User%20Programs/)
+- [Winlink Quick Start Guide](https://winlink.org/content/quick_start_amateur_radio_and_shares_stations)
+- [VARA HF Modem](https://rosmodem.wordpress.com/)
+- [Winlink and VARA on Linux/Mac](https://winlink.org/content/winlink_express_and_vara_linux_mac_updated_instructions)
+- [Pat Winlink Client](https://getpat.io/)
+- [ARDOP Open-Source Modem](https://github.com/pflarue/ardop)
+- [N1CLC: Winlink Email Using VARA HF](https://www.n1clc.com/2022/06/winlink-email-using-vara-hf.html)
+- [DELCO ARES: Winlink with VARA and Digirig Troubleshooting](https://www.delcoares.org/training/delco-ares-training/other-skills/using-winlink/winlink-with-vara-fm-and-digirig-troubleshooting-guide)
