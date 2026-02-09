@@ -1,9 +1,9 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
 Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF),
-VarAC, GridTracker, flrig, and Hamlib rigctld for digital modes on the Yaesu
-FT-1000MP using a Digirig Mobile interface connected to the rear panel PACKET
-connector.
+VarAC, GridTracker, JTAlert, flrig, and Hamlib rigctld for digital modes on
+the Yaesu FT-1000MP using a Digirig Mobile interface connected to the rear
+panel PACKET connector.
 
 ---
 
@@ -26,11 +26,12 @@ connector.
 15. [flrig Rig Control Middleware](#flrig-rig-control-middleware)
 16. [Hamlib rigctld Rig Control Daemon](#hamlib-rigctld-rig-control-daemon)
 17. [GridTracker Setup](#gridtracker-setup)
-18. [Audio Level Calibration](#audio-level-calibration)
-19. [Testing the Setup](#testing-the-setup)
-20. [Operating Tips](#operating-tips)
-21. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
-22. [Troubleshooting](#troubleshooting)
+18. [JTAlert Setup](#jtalert-setup)
+19. [Audio Level Calibration](#audio-level-calibration)
+20. [Testing the Setup](#testing-the-setup)
+21. [Operating Tips](#operating-tips)
+22. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+23. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1478,6 +1479,181 @@ GridTracker -- it only sees the UDP data stream from WSJT-X.
 
 ---
 
+## JTAlert Setup
+
+[JTAlert](https://hamapps.com/) is a free Windows companion application for
+WSJT-X and JTDX that provides real-time audio and visual alerts based on
+decoded callsigns. It tracks award progress (DXCC, WAS, WPX, grids, CQ/ITU
+zones), detects duplicate contacts ("Worked B4"), and bridges QSO logging
+to external logbook software and online services.
+
+> **Key point:** JTAlert does **not** control your radio. Like GridTracker, it
+> receives decoded data from WSJT-X over UDP and is completely radio-agnostic.
+> Your FT-1000MP CAT setup is handled entirely by WSJT-X.
+
+```
+FT-1000MP <--serial CAT--> WSJT-X <--UDP (port 2237)--> JTAlert
+                                                          |
+                                                          +--> Logbook (ACLog, DXKeeper, etc.)
+                                                          +--> Online (LoTW, QRZ, eQSL, ClubLog)
+```
+
+> **Platform:** JTAlert is **Windows only** (Windows 10/11). There is no Linux
+> or macOS version. Linux users should consider
+> [GridTracker](#gridtracker-setup) as an alternative.
+
+### Installing JTAlert
+
+**Prerequisites:**
+- **.NET 8 Desktop Runtime** -- download from Microsoft (match your Windows
+  architecture: 64-bit or 32-bit).
+
+**Installation (three downloads from [hamapps.com](https://hamapps.com/)):**
+1. **JTAlert application** -- main installer.
+2. **Callsign Database** -- LoTW and eQSL user databases for flagging
+   confirmed stations.
+3. **Voiced Alert Sounds** (optional) -- spoken callsign/country alerts
+   available in 21 languages.
+
+### Configuring WSJT-X for JTAlert
+
+JTAlert reads WSJT-X's configuration file on startup to auto-detect the UDP
+settings. In WSJT-X, go to **File > Settings > Reporting**:
+
+1. Check **"Accept UDP requests"** -- **required** for JTAlert to trigger
+   logging in WSJT-X.
+2. Check **"Prompt me to log QSO"**.
+3. Check **"Clear DX call and grid after logging"**.
+4. Set **UDP Server** to `127.0.0.1` port `2237` (defaults).
+   - If also running GridTracker, use multicast `224.0.0.1` instead
+     (see [Running with GridTracker](#running-jtalert-with-gridtracker) below).
+
+> Without "Accept UDP requests" checked, JTAlert cannot trigger the WSJT-X
+> log dialog or control the DX call field.
+
+### Configuring JTAlert
+
+1. Launch JTAlert (after WSJT-X is running).
+2. Open **Settings** (F2 key or Settings menu).
+3. Set your **callsign** and **grid square**.
+4. JTAlert auto-detects the WSJT-X UDP connection -- no manual port
+   configuration is typically needed.
+
+### Alert Configuration
+
+Each alert type can be independently configured with custom colors and sounds.
+Open **Settings > Alerts** to enable:
+
+- **Your Callsign Decoded** -- someone is calling you
+- **CQ Stations** -- stations calling CQ
+- **Wanted DXCC** (by band/mode) -- countries you need
+- **Wanted US States** (by band/mode) -- for WAS tracking
+- **Wanted Grids** (by band/mode) -- grid squares you need
+- **Wanted CQ Zones** (by band/mode) -- for WAZ tracking
+- **Wanted Continents** (by band/mode)
+- **Wanted Prefixes** (by band/mode) -- specific prefixes you are chasing
+- **Wanted Callsigns** -- specific stations you define
+
+Alerts can be restricted to stations that are **LoTW users** or **eQSL users**,
+so you only chase contacts likely to confirm.
+
+### Logging Integration
+
+JTAlert can automatically forward logged QSOs to external logbook software.
+Configure in **Settings > Logging**:
+
+| Logbook | Integration |
+|---------|-------------|
+| **DXKeeper** (DXLab Suite) | Native TCP API |
+| **ACLog** (N3FJP) | Auto-detected API |
+| **Log4OM V2** | UDP integration |
+| **HRD Logbook** | Native API |
+| **Standard ADIF file** | File-based export |
+
+> **Important:** Do not enable both JTAlert's logging and WSJT-X's direct QSO
+> forwarding to the same logbook -- this creates duplicate entries. Use one
+> path or the other.
+
+### Online QSO Uploads
+
+JTAlert can automatically upload logged QSOs to:
+
+- **QRZ.com** logbook (requires API key)
+- **eQSL.cc**
+- **ClubLog**
+- **HRDLog.net**
+
+### Callsign Lookups
+
+Configure in **Settings > Lookups**:
+
+- **QRZ.com** -- requires paid XML subscription
+- **HamQTH.com** -- free alternative
+
+Lookup data (name, QTH, grid) can be automatically populated into logged QSOs.
+
+### B4 (Worked Before) Database
+
+JTAlert maintains an internal database of all logged QSOs to flag duplicate
+contacts:
+
+- Decoded stations that have been worked before are highlighted as "Worked B4"
+  in the decode list.
+- B4 matching can be configured by **band**, **mode**, or **band+mode**.
+- For new installations, import your existing log via ADIF to seed the database.
+- After the initial import, JTAlert updates the B4 database automatically with
+  each new QSO.
+- Audio alerts can be suppressed for "Worked B4" stations to reduce alert
+  fatigue.
+
+### Rebuild Alert Database (Scan Log)
+
+After initial setup or after importing QSOs, rebuild the alert database to
+sync JTAlert's award tracking with your actual log:
+
+1. Open **Settings** (F2).
+2. Navigate to **Rebuild Alert Database**.
+3. Enable rebuilds for each award you are pursuing (DXCC, WAS, grids, etc.).
+4. Select confirmation options (e.g., "confirmed via LoTW" for DXCC credit).
+5. Click **Rebuild All (enabled)**.
+6. Click **OK (Apply)** when prompted.
+
+After a rebuild, alerts will only fire for entities you still **need**, not
+ones you have already worked or confirmed.
+
+### LoTW Integration
+
+- **LoTW user flagging:** JTAlert maintains a database of known LoTW users and
+  flags decoded callsigns that are LoTW members. This lets you prioritize
+  contacts with stations that will confirm.
+- **Restrict alerts to LoTW users:** Configure wanted-entity alerts to only
+  fire for stations that are LoTW users.
+- **QSL status:** JTAlert can automatically set the LoTW sent status to
+  "Requested" in your logbook when logging a QSO.
+
+### Running JTAlert with GridTracker
+
+To run both JTAlert and GridTracker simultaneously, use **UDP multicast** so
+WSJT-X can send data to multiple listeners:
+
+1. In WSJT-X: set UDP server IP to `224.0.0.1`, keep port `2237`.
+2. JTAlert auto-detects the multicast address from WSJT-X's config.
+3. In GridTracker: enable **Multicast** and set IP to `224.0.0.1`, port `2237`.
+4. Both applications receive the same UDP data simultaneously.
+
+### JTDX Support
+
+JTAlert has full JTDX support, identical to WSJT-X. All alerting and logging
+features work the same way. JTDX supports FT8 and JT65 but not FT4.
+
+### JS8Call Support
+
+JTAlert has **limited** JS8Call support. It can handle JS8Call's log QSO
+requests (forwarding logged contacts to your logbook), but full decode-level
+alerting (wanted DXCC, states, etc.) is not available for JS8Call decodes.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -1711,6 +1887,24 @@ If you need to restore factory defaults without a clone backup:
 This is a known issue on some FT-1000MP units with corrupted internal memory.
 Perform a Level 3 reset (hold **29/0** during power-up), then re-enter your
 menu settings.
+
+### JTAlert Not Receiving Decodes or Not Logging
+
+1. **Accept UDP requests:** In WSJT-X Settings > Reporting, "Accept UDP
+   requests" must be checked. This is the most common cause of JTAlert not
+   working.
+2. **WSJT-X running first:** WSJT-X should be running before JTAlert is
+   launched. JTAlert reads WSJT-X's config file on startup.
+3. **UDP port match:** JTAlert reads the port from WSJT-X's config. If you
+   changed the default port (2237), restart JTAlert so it picks up the change.
+4. **Firewall:** Ensure both WSJT-X and JTAlert are allowed through the
+   Windows firewall for UDP traffic.
+5. **.NET runtime:** JTAlert requires .NET 8 Desktop Runtime. If JTAlert
+   crashes or fails to start, verify the runtime is installed.
+6. **Duplicate logging:** If QSOs are being logged twice, you have both
+   JTAlert and WSJT-X sending to the same logbook. Disable one path.
+7. **Multicast (when also using GridTracker):** Switch WSJT-X UDP server from
+   `127.0.0.1` to `224.0.0.1` and restart both JTAlert and GridTracker.
 
 ### GridTracker Shows No Stations on Map
 
@@ -1976,6 +2170,13 @@ GRIDTRACKER (Settings > General)
               Prompt me to log QSO = Checked
               Clear DX call and grid = Checked
 
+JTALERT (Windows only)
+  Prereq:     .NET 8 Desktop Runtime
+  WSJT-X:     Settings > Reporting > Accept UDP requests
+              UDP Server = 127.0.0.1 port 2237
+  Multicast:  Use 224.0.0.1 if also running GridTracker
+  Auto-reads WSJT-X config on startup (no manual port config)
+
 VARAC (Settings > RIG control & VARA Configuration)
   PTT Method:     CAT
   COM Port:       COMx (Digirig CP210x)
@@ -2040,6 +2241,14 @@ AUDIO LEVELS (all applications)
 - [Getting Started with GridTracker](https://docs.gridtracker.org/latest/Getting-Started.html)
 - [Configuring WSJT-X for GridTracker (Appendix B)](https://docs.gridtracker.org/latest/Appendices/Appendix-B-Configuring-WSJT-X-and-JTDX-for-GridTracker.html)
 - [GridTracker Source Code (GitLab)](https://gitlab.com/gridtracker.org/gridtracker2)
+
+### JTAlert
+- [JTAlert Website & Download](https://hamapps.com/)
+- [JTAlert Voiced Alert Sound Files](https://hamapps.com/Sounds/)
+- [HamApps Support Group](https://hamapps.groups.io/g/Support/)
+- [W6AER: Using JTAlert with WSJT-X](https://w6aer.com/using_jtalert_with_wsjt-x/)
+- [K0PIR: WSJT-X JTAlert Setup Guide](https://k0pir.us/wsjt-x-jt-alert/)
+- [DXLab Suite: Getting Started with JTAlert](https://www.dxlabsuite.com/dxlabwiki/GettingStartedwithK1JTModesWithJTAlert)
 
 ### Hamlib / rigctld
 - [Hamlib Project (GitHub)](https://github.com/Hamlib/Hamlib)
