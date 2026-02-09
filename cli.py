@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Interactive CLI for the Yaesu FT-1000MP CAT control."""
 
+import argparse
+import os
 import sys
 
 from ft1000mp import FT1000MP, FT1000MPError
@@ -41,12 +43,55 @@ def format_freq(hz: int) -> str:
     return f"{mhz:.6f} MHz ({hz:,} Hz)"
 
 
+def _env_bool(name: str) -> "bool | None":
+    """Read an env var as a bool: '0'/'false' → False, '1'/'true' → True, unset → None."""
+    val = os.environ.get(name)
+    if val is None:
+        return None
+    return val.lower() in ("1", "true")
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="FT-1000MP CAT Control")
+    parser.add_argument(
+        "port", nargs="?", default=DEFAULT_PORT,
+        help=f"serial port (default: {DEFAULT_PORT}, or FT1000MP_PORT env var)",
+    )
+    parser.add_argument(
+        "--rts", choices=["on", "off"], default=None,
+        help="force RTS line state (default: driver default, or FT1000MP_RTS env var). "
+             "Digirig (CP210x) needs --rts off.",
+    )
+    parser.add_argument(
+        "--dtr", choices=["on", "off"], default=None,
+        help="force DTR line state (default: driver default, or FT1000MP_DTR env var)",
+    )
+    return parser.parse_args()
+
+
+def _resolve_bool(cli_val: "str | None", env_name: str) -> "bool | None":
+    """CLI flag wins, then env var, then None (driver default)."""
+    if cli_val is not None:
+        return cli_val == "on"
+    return _env_bool(env_name)
+
+
 def main():
-    port = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PORT
+    args = _parse_args()
+    port = args.port
+    rts = _resolve_bool(args.rts, "FT1000MP_RTS")
+    dtr = _resolve_bool(args.dtr, "FT1000MP_DTR")
 
     print(f"FT-1000MP CAT Control — connecting on {port}")
+    if rts is not None or dtr is not None:
+        parts = []
+        if rts is not None:
+            parts.append(f"RTS={'on' if rts else 'off'}")
+        if dtr is not None:
+            parts.append(f"DTR={'on' if dtr else 'off'}")
+        print(f"  Serial line overrides: {', '.join(parts)}")
     try:
-        radio = FT1000MP(port=port)
+        radio = FT1000MP(port=port, rts=rts, dtr=dtr)
         radio.open()
     except FT1000MPError as e:
         print(f"Error: {e}")

@@ -30,11 +30,15 @@ class SerialPort:
         baudrate: int = DEFAULT_BAUDRATE,
         timeout: float = DEFAULT_TIMEOUT,
         retries: int = DEFAULT_RETRIES,
+        rts: Optional[bool] = None,
+        dtr: Optional[bool] = None,
     ):
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
         self.retries = retries
+        self._rts = rts
+        self._dtr = dtr
         self._ser: Optional[serial.Serial] = None
 
     # -- context manager ---------------------------------------------------
@@ -65,6 +69,10 @@ class SerialPort:
                 stopbits=serial.STOPBITS_TWO,
                 timeout=self.timeout,
             )
+            if self._rts is not None:
+                self._ser.rts = self._rts
+            if self._dtr is not None:
+                self._ser.dtr = self._dtr
         except serial.SerialException as exc:
             raise SerialConnectionError(
                 f"Cannot open {self.port}: {exc}"

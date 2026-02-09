@@ -105,8 +105,13 @@ def _parse_vfo_block(data: bytes) -> VFOStatus:
 class FT1000MP:
     """High-level interface to the Yaesu FT-1000MP transceiver."""
 
-    def __init__(self, port: str = DEFAULT_PORT):
-        self._serial = SerialPort(port=port)
+    def __init__(
+        self,
+        port: str = DEFAULT_PORT,
+        rts: "bool | None" = None,
+        dtr: "bool | None" = None,
+    ):
+        self._serial = SerialPort(port=port, rts=rts, dtr=dtr)
 
     # -- context manager ---------------------------------------------------
 

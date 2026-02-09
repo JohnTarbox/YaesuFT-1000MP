@@ -30,6 +30,16 @@ export FT1000MP_PORT=/dev/ttyUSB1   # use everywhere: CLI, library, tests
 
 Use the `ports` command inside the CLI (or `python3 -c "from serial.tools.list_ports import comports; [print(p.device, p.description) for p in comports()]"`) to see which `/dev/ttyUSBx` devices are available and identify them by chipset (e.g. "CP2102" vs "CH340").
 
+**Digirig (CP210x):** The CP210x chip asserts RTS high by default, which gates the CAT TX line and prevents write commands from reaching the radio (reads still work). You must deassert RTS:
+
+```bash
+python cli.py --rts off                              # CLI flag
+export FT1000MP_RTS=false                             # or env var
+FT1000MP_RTS=false python3 -m pytest tests/ -v -m live  # tests
+```
+
+The `FT1000MP_RTS` and `FT1000MP_DTR` env vars accept `true`/`1` or `false`/`0`.
+
 ## Installation
 
 ```bash
@@ -55,7 +65,9 @@ with FT1000MP(port="/dev/ttyUSB0") as radio:
 ## CLI Usage
 
 ```bash
-python cli.py [port]        # default: /dev/ttyUSB0 (or FT1000MP_PORT env var)
+python cli.py [port]              # default: /dev/ttyUSB0 (or FT1000MP_PORT env var)
+python cli.py --rts off           # Digirig (CP210x) — must deassert RTS
+python cli.py /dev/ttyUSB1 --rts off --dtr off
 ```
 
 | Command | Description |

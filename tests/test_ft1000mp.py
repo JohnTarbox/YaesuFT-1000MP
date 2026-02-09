@@ -9,6 +9,7 @@ Unit tests only:     pytest tests/ -v -m "not live"
 Live tests only:     pytest tests/ -v -m live
 """
 
+import os
 import time
 
 import pytest
@@ -609,10 +610,22 @@ class TestErrorHandling:
 # ===================================================================
 
 
+def _env_bool(name: str) -> "bool | None":
+    """Read an env var as a bool: '0'/'false' → False, '1'/'true' → True, unset → None."""
+    val = os.environ.get(name)
+    if val is None:
+        return None
+    return val.lower() in ("1", "true")
+
+
 @pytest.fixture(scope="session")
 def radio():
     """Session-scoped fixture: open port once for all live tests."""
-    r = FT1000MP(port=DEFAULT_PORT)
+    r = FT1000MP(
+        port=DEFAULT_PORT,
+        rts=_env_bool("FT1000MP_RTS"),
+        dtr=_env_bool("FT1000MP_DTR"),
+    )
     r.open()
     radio_pause()
     yield r
