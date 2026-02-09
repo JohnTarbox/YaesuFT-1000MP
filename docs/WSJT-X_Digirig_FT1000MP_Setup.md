@@ -1,7 +1,8 @@
-# WSJT-X Setup Guide: Yaesu FT-1000MP with Digirig Mobile
+# Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
-Complete guide for configuring FT8 and other digital modes on the Yaesu FT-1000MP
-using a Digirig Mobile interface connected to the rear panel PACKET connector.
+Complete guide for configuring WSJT-X and Fldigi for digital modes on the Yaesu
+FT-1000MP using a Digirig Mobile interface connected to the rear panel PACKET
+connector.
 
 ---
 
@@ -13,10 +14,12 @@ using a Digirig Mobile interface connected to the rear panel PACKET connector.
 4. [Radio Menu Configuration](#radio-menu-configuration)
 5. [WSJT-X Radio Settings](#wsjt-x-radio-settings)
 6. [WSJT-X Audio Settings](#wsjt-x-audio-settings)
-7. [Audio Level Calibration](#audio-level-calibration)
-8. [Testing the Setup](#testing-the-setup)
-9. [Operating Tips](#operating-tips)
-10. [Troubleshooting](#troubleshooting)
+7. [Fldigi Rig Control Settings](#fldigi-rig-control-settings)
+8. [Fldigi Audio Settings](#fldigi-audio-settings)
+9. [Audio Level Calibration](#audio-level-calibration)
+10. [Testing the Setup](#testing-the-setup)
+11. [Operating Tips](#operating-tips)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -244,6 +247,132 @@ or you can select the ALSA device name.
 
 ---
 
+## Fldigi Rig Control Settings
+
+Fldigi offers two methods for CAT control of the FT-1000MP: **Hamlib** (built-in
+library supporting many rigs) and **RigCAT** (XML-based definitions). Hamlib is
+recommended as it requires no additional files.
+
+Open **Configure > Rig Control** (or use the configuration wizard on first launch).
+
+### Method 1: Hamlib (Recommended)
+
+Select the **Hamlib** tab and check **Use Hamlib**.
+
+| Setting            | Value                                        |
+|--------------------|----------------------------------------------|
+| Rig                | **Yaesu FT-1000MP**                          |
+| Device             | COM port (e.g. COM3) or `/dev/ttyUSB0`       |
+| Baud rate          | **4800**                                     |
+| Stop bits          | **2**                                        |
+| Sideband           | (leave default)                              |
+| PTT via Hamlib command | **Unchecked** (use hardware PTT instead)  |
+
+> **Variant selection:** Hamlib lists multiple FT-1000MP models. Choose the one
+> matching your radio:
+>
+> | Radio                    | Hamlib Model                    |
+> |--------------------------|---------------------------------|
+> | FT-1000MP (original)     | **Yaesu FT-1000MP**             |
+> | Mark V FT-1000MP         | **Yaesu MARK-V FT-1000MP**     |
+> | Mark V Field FT-1000MP   | **Yaesu MARK-V Field FT-1000MP** |
+
+After entering settings, click **Initialize**. The button text should change
+from red to black, indicating successful connection. The frequency display in
+Fldigi's toolbar should now track the radio.
+
+> If initialization fails, try checking **RTS/CTS** off (and toggling the
+> **RTS** and **DTR** checkboxes), then re-initialize.
+
+### Method 2: RigCAT (Alternative)
+
+If Hamlib does not work reliably, use the RigCAT method with an XML rig
+definition file:
+
+1. Download `FT-1000MP.xml` from the
+   [Fldigi XML archive](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/).
+2. Save it to a known location on your computer.
+3. In Fldigi, go to **Configure > Rig Control > RigCAT** tab.
+4. Check **Use RigCAT**.
+5. Browse to the downloaded XML file.
+6. Set the serial port, baud rate (**4800**), and stop bits (**2**).
+7. Click **Initialize**.
+
+### Hardware PTT Configuration
+
+Select the **Hardware PTT** tab:
+
+| Setting                | Value                                       |
+|------------------------|---------------------------------------------|
+| Use serial port PTT    | **Checked**                                 |
+| Device                 | COM port of CP210x (same as CAT port)       |
+| Use RTS                | **Checked**                                 |
+| RTS = +V               | **Checked** (PTT active when RTS asserted)  |
+| Use DTR                | **Unchecked**                               |
+
+> **Important:** Disable any **hardware flow control** or **handshake** options
+> in the serial port settings. The Digirig uses RTS for PTT, not for flow
+> control. Any setting that mentions RTS/CTS handshake must be turned off.
+
+> **CP210x RTS note:** The same RTS issue from the WSJT-X section applies here.
+> The CP210x asserts RTS high by default. In Fldigi's Hamlib tab, ensure RTS is
+> not checked as a flow control option. It should only be used as a PTT signal
+> via the Hardware PTT tab. If CAT reads work but writes fail, this is the
+> likely cause.
+
+---
+
+## Fldigi Audio Settings
+
+Go to **Configure > Soundcard > Devices** tab.
+
+### Soundcard Selection
+
+| Setting            | Value                                          |
+|--------------------|------------------------------------------------|
+| Capture (Input)    | **USB Audio Device** (or "Digirig" if renamed) |
+| Playback (Output)  | **USB Audio Device** (or "Digirig" if renamed) |
+
+On Linux, select the appropriate ALSA device from the **Port Audio** or
+**PulseAudio** dropdown.
+
+### Audio Level Monitoring
+
+- Fldigi has a built-in waterfall and signal level indicator.
+- The diamond-shaped indicator on the bottom left shows input level.
+- A properly adjusted level shows a dark blue waterfall background with signals
+  visible as yellow/red traces.
+- If the waterfall background is bright or washed out, the input level is too
+  high.
+
+### Transmit Audio
+
+- Fldigi's built-in attenuator can be adjusted from the main window.
+- The output level slider on the right side of the main window controls
+  transmit audio amplitude.
+- Start with the slider at about **50%** and adjust as described in
+  [Audio Level Calibration](#audio-level-calibration).
+
+### Supported Modes
+
+Fldigi supports many digital modes through the PACKET connector, including:
+
+| Mode     | Typical Use            | Bandwidth  |
+|----------|------------------------|------------|
+| PSK31    | Keyboard chat (QSO)    | 31 Hz      |
+| PSK63    | Faster keyboard chat   | 63 Hz      |
+| RTTY     | Classic teletype       | 170 Hz     |
+| Olivia   | Weak signal chat       | 250-2000 Hz|
+| MT63     | Keyboard (net use)     | 500-2000 Hz|
+| JS8Call* | Keyboard (via JS8Call) | 50 Hz      |
+| CW       | Software CW decode     | ~100 Hz    |
+| THOR     | Weak signal keyboard   | varies     |
+| MFSK     | Image and text         | varies     |
+
+*JS8Call uses its own application but similar radio/audio setup.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -415,6 +544,22 @@ This is a known issue on some FT-1000MP units with corrupted internal memory.
 Perform a Level 3 reset (hold **29/0** during power-up), then re-enter your
 menu settings.
 
+### Fldigi Hamlib Initialize Fails (Button Stays Red)
+
+1. **Turn radio on first:** The radio must be powered on and in PKT USER mode
+   before clicking Initialize. Fldigi must detect the CAT connection.
+2. **Toggle RTS/DTR:** Try checking or unchecking the RTS and DTR checkboxes
+   in the Hamlib tab, then re-initialize.
+3. **Try RigCAT:** If Hamlib is unreliable, switch to the RigCAT method using
+   the FT-1000MP.xml definition file (see [Method 2: RigCAT](#method-2-rigcat-alternative)).
+4. **Command interval:** In the Hamlib advanced settings, try increasing the
+   **retries**, **retry interval**, and **command interval** values for more
+   consistent communication.
+5. **DB-9 cable polarity:** There are two types of FT-1000MP RS-232 cables
+   on the market -- one with crossed RXD/TXD and one without. Both use
+   female/female connectors, making them hard to distinguish. If CAT fails
+   with one cable, try the other type.
+
 ### Decoding Works but No QSOs Complete
 
 1. **Time sync:** FT8 requires time accuracy within ~1 second. Check NTP.
@@ -451,10 +596,27 @@ WSJT-X AUDIO TAB
   Input:      USB Audio Device (Digirig)
   Output:     USB Audio Device (Digirig)
 
+FLDIGI RIG CONTROL (Hamlib tab)
+  Rig:        Yaesu FT-1000MP
+  Device:     COMx / /dev/ttyUSB0
+  Baud:       4800
+  Stop bits:  2
+
+FLDIGI HARDWARE PTT
+  Use serial port PTT:  Checked
+  Device:               COMx (same as CAT)
+  Use RTS:              Checked
+  RTS = +V:             Checked
+
+FLDIGI AUDIO (Soundcard > Devices)
+  Capture:    USB Audio Device (Digirig)
+  Playback:   USB Audio Device (Digirig)
+
 AUDIO LEVELS
   OS Recording:   Start at 20%, adjust to stay below red
   OS Playback:    ~80%
   WSJT-X Pwr:     25-50%, adjust for zero ALC
+  Fldigi TX:      ~50%, adjust for zero ALC
   MIC GAIN:       ~10 o'clock
 ```
 
@@ -462,13 +624,23 @@ AUDIO LEVELS
 
 ## References
 
+### Digirig
 - [Digirig Forum: Getting Started with FT-1000MP](https://forum.digirig.net/t/getting-started-with-yaesu-ft-1000mp/5723)
 - [Digirig Forum: Cables for FT-1000/FT-2000](https://forum.digirig.net/t/cables-for-yaesu-ft-1000-yaesu-ft-2000/502)
 - [Digirig: Setting Audio Levels for Digital Modes](https://digirig.net/setting-audio-levels-for-digital-modes/)
 - [Digirig: Getting Started with Digirig Mobile](https://digirig.net/getting-started-with-digirig-mobile/)
+- [Digirig: Understanding Rig Control Options](https://digirig.net/understanding-rig-control-options/)
+
+### Radio
 - [S53RM: FT-1000MP PACKET Connector Setup for WSJT](https://lea.hamradio.si/~s53rm/FT-1000MP%20WSJT.htm)
 - [TigerTronics: FT-1000MP Setup](https://tigertronics.com/ft1000mp.htm)
 - [MicroHam: FT-1000MP Transceiver Settings](https://www.microham.com/contents/en-us/d151.html)
 - [N1EU: FT-1000MP Setup Page](https://www.qsl.net/n1eu/Yaesu/MPsetup.htm)
-- [WSJT-X User Guide](https://wsjt.sourceforge.io/wsjtx-doc/wsjtx-main-2.6.1.html)
 - [FT-1000MP Operating Manual (PDF)](http://www.foxtango.org/ft-library/FT-Library/nineties/FT-1000MP%20Operating%20Manual.pdf)
+
+### Software
+- [WSJT-X User Guide](https://wsjt.sourceforge.io/wsjtx-doc/wsjtx-main-2.6.1.html)
+- [Fldigi Users Manual: Rig Control Configuration](http://www.w1hkj.com/FldigiHelp/rig_config_page.html)
+- [Fldigi Beginners' Guide](http://www.w1hkj.com/beginners.html)
+- [Fldigi XML Rig Definitions (FT-1000MP)](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/)
+- [Hamlib Supported Radios](https://github.com/Hamlib/Hamlib/wiki/Supported-Radios)
