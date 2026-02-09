@@ -140,25 +140,51 @@ radio operate in USB internally while showing PKT/LSB on the display. This is
 necessary because the FT-1000MP only routes rear PACKET connector audio in PKT
 mode.
 
-| Parameter                 | Display    | Value     | Notes                       |
-|---------------------------|------------|-----------|-----------------------------|
-| Mode                      | nodE       | PAc-Lo    | Packet Low mode             |
-| Display Offset            | dSP-oFSt   | 0.000     |                             |
-| RX PLL                    | r-PLL      | 1.500     |                             |
-| RX Carrier                | r-cAr      | 453.500   |                             |
-| TX PLL                    | t-PLL      | 1.500     |                             |
-| TX Carrier                | t-cAr      | 453.500   |                             |
-| RTTY Shift                | rttY-SFt   | 0.000     |                             |
-| Easy Set                  | EASY-SEt   | oFF       | Must be OFF for manual vals |
+#### Complete Parameter Reference
+
+| # | Parameter      | Display    | Valid Range              |
+|---|----------------|------------|--------------------------|
+| 1 | Mode           | nodE       | LSB, USB, CW, RTTY, PKT |
+| 2 | Display Offset | dSP-oFSt   | ±5.000 kHz               |
+| 3 | RX PLL         | r-PLL      | ±5.000 kHz               |
+| 4 | RX Carrier     | r-cAr      | 450.000–460.000 kHz      |
+| 5 | TX PLL         | t-PLL      | ±5.000 kHz               |
+| 6 | TX Carrier     | t-cAr      | 450.000–460.000 kHz      |
+| 7 | RTTY Shift     | rttY-SFt   | ±5.000 kHz               |
+| 8 | Easy Set       | EASY-SEt   | oFF, FAX, PAcKEt         |
+
+#### Standard Values (most FT-1000MP and all Mark V units)
+
+| Parameter      | Display    | Value     | Notes                       |
+|----------------|------------|-----------|-----------------------------|
+| Mode           | nodE       | PAc-Lo    | Packet Low mode             |
+| Display Offset | dSP-oFSt   | 0.000     |                             |
+| RX PLL         | r-PLL      | 1.500     |                             |
+| RX Carrier     | r-cAr      | 453.500   |                             |
+| TX PLL         | t-PLL      | 1.500     |                             |
+| TX Carrier     | t-cAr      | 453.500   |                             |
+| RTTY Shift     | rttY-SFt   | 0.000     |                             |
+| Easy Set       | EASY-SEt   | oFF       | Must be OFF for manual vals |
+
+#### Early-Production Values (non-Mark-V units that cannot set t-cAr below 456.300)
+
+| Parameter      | Display    | Value     | Notes                          |
+|----------------|------------|-----------|--------------------------------|
+| Mode           | nodE       | PAc-Lo    | Packet Low mode                |
+| Display Offset | dSP-oFSt   | +2.125    |                                |
+| RX PLL         | r-PLL      | +2.210    | Set PLL values before carriers |
+| RX Carrier     | r-cAr      | 452.790   |                                |
+| TX PLL         | t-PLL      | +2.210    | Set PLL values before carriers |
+| TX Carrier     | t-cAr      | 452.790   |                                |
+| RTTY Shift     | rttY-SFt   | 0.000     |                                |
+| Easy Set       | EASY-SEt   | oFF       | Must be OFF for manual vals    |
+
+> Set PLL values (+2.210) *before* carrier values. The modified PLL offset
+> shifts the acceptable carrier range, allowing 452.790 on early units.
 
 > **Alternative (simple method):** Instead of entering values manually, you can
 > set Easy Set to **PS31-U** which pre-loads USB-compatible values. Then set
 > Easy Set back to **oFF** to lock them in.
-
-> **Note for early-production FT-1000MP (non-Mark-V):** Some early units do not
-> allow TX Carrier below 456.300. If this affects you, use the alternative
-> values: dSP-oFSt=+2125, r-PLL=+2210, r-cAr=452.790, t-PLL=+2210,
-> t-cAr=452.790.
 
 ### Menu 6-1: RTTY Polarity
 
