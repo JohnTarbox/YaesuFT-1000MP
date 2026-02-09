@@ -1,8 +1,15 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ft1000mp"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = ["pyserial>=3.5"]
+
+[tool.setuptools.packages.find]
+include = ["ft1000mp*"]
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "mypy>=1.0", "types-pyserial>=3.5"]
