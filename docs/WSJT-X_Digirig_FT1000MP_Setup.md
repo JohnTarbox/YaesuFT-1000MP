@@ -151,7 +151,7 @@ mode.
 | 5 | TX PLL         | t-PLL      | ±5.000 kHz               |
 | 6 | TX Carrier     | t-cAr      | 450.000–460.000 kHz      |
 | 7 | RTTY Shift     | rttY-SFt   | ±5.000 kHz               |
-| 8 | Easy Set       | EASY-SEt   | oFF, FAX, PAcKEt         |
+| 8 | Easy Set       | EASY-SEt   | oFF, SStu-L, SStu-u, FAcS-L, FAcS-u |
 
 #### Standard Values (most FT-1000MP and all Mark V units)
 
@@ -159,12 +159,24 @@ mode.
 |----------------|------------|-----------|-----------------------------|
 | Mode           | nodE       | PAc-Lo    | Packet Low mode             |
 | Display Offset | dSP-oFSt   | 0.000     |                             |
-| RX PLL         | r-PLL      | 1.500     |                             |
-| RX Carrier     | r-cAr      | 453.500   |                             |
-| TX PLL         | t-PLL      | 1.500     |                             |
-| TX Carrier     | t-cAr      | 453.500   |                             |
+| RX PLL         | r-PLL      | 1.750     |                             |
+| RX Carrier     | r-cAr      | 453.250   |                             |
+| TX PLL         | t-PLL      | 1.750     |                             |
+| TX Carrier     | t-cAr      | 453.250   |                             |
 | RTTY Shift     | rttY-SFt   | 0.000     |                             |
 | Easy Set       | EASY-SEt   | oFF       | Must be OFF for manual vals |
+
+These values match those loaded by the **SStu-u** (SSTV Upper/USB) Easy Set
+preset. The PLL offset of 1.750 and carrier of 453.250 transform the PAc-Lo
+(LSB-based) internal mode into USB-equivalent operation.
+
+#### Easy Set Method (Recommended)
+
+Instead of entering values manually, use the SStu-u preset:
+
+1. Scroll to parameter 8 (Easy Set / `EASY-SEt`)
+2. Set it to **SStu-u** and press **ENTER**
+3. Set it back to **oFF** and press **ENTER** to lock the values in
 
 #### Early-Production Values (non-Mark-V units that cannot set t-cAr below 456.300)
 
@@ -181,10 +193,6 @@ mode.
 
 > Set PLL values (+2.210) *before* carrier values. The modified PLL offset
 > shifts the acceptable carrier range, allowing 452.790 on early units.
-
-> **Alternative (simple method):** Instead of entering values manually, you can
-> set Easy Set to **PS31-U** which pre-loads USB-compatible values. Then set
-> Easy Set back to **oFF** to lock them in.
 
 ### Menu 6-1: RTTY Polarity
 
@@ -248,6 +256,26 @@ Open WSJT-X and go to **File > Settings** (or **F2**), then the **Radio** tab.
 > PTT is handled through the DIN-5 PACKET connector (pin 3). The Digirig routes
 > the RTS signal from its serial port to the PTT line on the TRRS audio cable.
 > If WSJT-X offers a separate PTT port, use the same COM port as CAT.
+
+### Mode
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| Mode             | **None**                           |
+
+> **Critical:** Do not set this to USB or Data/Pkt. Setting Mode to USB causes
+> WSJT-X to send a SET_MODE command that kicks the radio out of PKT USER mode.
+> Setting it to Data/Pkt switches the radio to RTTY on transmit. Leave it on
+> **None** and control the mode from the radio's front panel.
+
+### Transmit Audio Source
+
+| Setting              | Value                              |
+|----------------------|------------------------------------|
+| Transmit Audio Source | **Rear/Data**                     |
+
+> The Digirig is connected to the rear PACKET connector. Selecting Rear/Data
+> ensures TX audio is routed through the PACKET port, not the front mic.
 
 ### Split Operation
 

@@ -363,6 +363,7 @@ class TestParseVfoBlock:
         freq_hz=14_195_000,
         mode=Mode.USB,
         sub_mode_bit=False,
+        user_mode=False,
         clar_offset=0,
         rit=False,
         xit=False,
@@ -383,8 +384,8 @@ class TestParseVfoBlock:
             clar_raw = (-clar_offset) * 16 // 10
             block[5] = ((clar_raw >> 8) & 0x7F) | 0x80
             block[6] = clar_raw & 0xFF
-        # Byte 7: mode (lower 3 bits)
-        block[7] = mode & 0x07
+        # Byte 7: mode (lower 3 bits); bit 7 = USER sub-mode
+        block[7] = (mode & 0x07) | (0x80 if user_mode else 0x00)
         # Byte 8: IF filter / sub-mode (bit 7 = qualifier)
         block[8] = 0x80 if sub_mode_bit else 0x00
         # Byte 9: RIT/XIT
@@ -448,6 +449,21 @@ class TestParseVfoBlock:
     def test_mode_pkt_fm(self):
         status = _parse_vfo_block(self._make_block(mode=Mode.PKT, sub_mode_bit=True))
         assert status.mode_name == "PKT-FM"
+
+    def test_mode_pkt_user(self):
+        status = _parse_vfo_block(self._make_block(mode=Mode.PKT, user_mode=True))
+        assert status.mode_name == "PKT-USER"
+        assert status.user_mode is True
+
+    def test_mode_pkt_user_flag_false_normally(self):
+        status = _parse_vfo_block(self._make_block(mode=Mode.PKT, sub_mode_bit=False))
+        assert status.user_mode is False
+
+    def test_mode_usb_user_mode_flag(self):
+        """USER bit only meaningful for PKT, but should still be parsed."""
+        status = _parse_vfo_block(self._make_block(mode=Mode.USB, user_mode=True))
+        assert status.user_mode is True
+        assert status.mode_name == "USB-USER"
 
     def test_clarifier_zero(self):
         status = _parse_vfo_block(self._make_block(clar_offset=0))

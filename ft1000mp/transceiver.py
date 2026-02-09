@@ -7,7 +7,7 @@ Status-update response layout (16 bytes per VFO, from Hamlib):
   Byte  0     : displayed-status flags
   Bytes 1-4   : frequency  (big-endian binary, *10/16 scaling)
   Bytes 5-6   : clarifier offset (sign-magnitude, *10/16 scaling)
-  Byte  7     : mode (bits 0-2)
+  Byte  7     : mode (bits 0-2); bit 7 = USER sub-mode active
   Byte  8     : IF-filter / extended-mode (bit 7 = sub-mode qualifier)
   Byte  9     : MEM/RIT/XIT status
   Bytes 10-15 : additional data
@@ -54,6 +54,7 @@ class VFOStatus:
     clarifier_offset: int
     rit: bool
     xit: bool
+    user_mode: bool = False
 
 
 @dataclass
@@ -78,15 +79,19 @@ def _parse_vfo_block(data: bytes) -> VFOStatus:
         clar_raw = -(((~clar_raw + 1) & 0x7FFF))
     clar_hz = clar_raw * 10 // 16
 
-    # Mode: byte 7, lower 3 bits
+    # Mode: byte 7, lower 3 bits; bit 7 = USER sub-mode active
+    user_mode = bool(data[7] & 0x80)
     mode_val = data[7] & 0x07
 
     # Sub-mode qualifier: byte 8 bit 7
     sub_mode_bit = bool(data[8] & 0x80)
-    mode_name = SUB_MODE_NAMES.get(
-        (mode_val, sub_mode_bit),
-        MODE_NAMES.get(mode_val, f"UNKNOWN(0x{mode_val:02X})"),
-    )
+    if user_mode:
+        mode_name = f"{MODE_NAMES.get(mode_val, f'UNKNOWN(0x{mode_val:02X})')}-USER"
+    else:
+        mode_name = SUB_MODE_NAMES.get(
+            (mode_val, sub_mode_bit),
+            MODE_NAMES.get(mode_val, f"UNKNOWN(0x{mode_val:02X})"),
+        )
 
     # RIT/XIT: byte 9
     xit = bool(data[9] & 0x01)
@@ -99,6 +104,7 @@ def _parse_vfo_block(data: bytes) -> VFOStatus:
         clarifier_offset=clar_hz,
         rit=rit,
         xit=xit,
+        user_mode=user_mode,
     )
 
 
