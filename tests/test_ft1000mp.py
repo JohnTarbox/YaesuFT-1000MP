@@ -2,7 +2,7 @@
 
 Unit tests run without hardware. Live integration tests (marked @pytest.mark.live)
 require a radio connected via serial. Set FT1000MP_PORT to override
-the default /dev/ttyUSB0.
+the default serial port.
 
 Run all tests:       pytest tests/ -v
 Unit tests only:     pytest tests/ -v -m "not live"
@@ -606,7 +606,7 @@ class TestErrorHandling:
 
 
 # ===================================================================
-# LIVE INTEGRATION TESTS — require radio on /dev/ttyUSB0
+# LIVE INTEGRATION TESTS — require radio on serial port
 # ===================================================================
 
 

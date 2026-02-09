@@ -20,15 +20,23 @@ Python CAT control library and interactive CLI for the Yaesu FT-1000MP HF transc
 - [pyserial](https://pypi.org/project/pyserial/) ≥ 3.5
 - USB-to-serial adapter (FTDI, Prolific, etc.)
 
-**WSL2 note:** USB devices must be attached via [usbipd-win](https://github.com/dorssel/usbipd-win) before they appear in the Linux guest. The adapter typically shows up as `/dev/ttyUSB0`. Your user must be in the `dialout` group (`sudo usermod -aG dialout $USER`).
+### Platform Notes
+
+**Windows:** The adapter appears as a COM port (e.g. `COM3`). Check Device Manager → Ports (COM & LPT) for the port number, or use `--detect` (see CLI Usage below) to auto-detect it. The default port is `COM3` when no override is set.
+
+**Linux:** The adapter typically shows up as `/dev/ttyUSB0`. The default port is `/dev/ttyUSB0` when no override is set. Your user must be in the `dialout` group (`sudo usermod -aG dialout $USER`).
+
+**WSL2:** USB devices must be attached via [usbipd-win](https://github.com/dorssel/usbipd-win) before they appear in the Linux guest. The adapter typically shows up as `/dev/ttyUSB0`. Your user must be in the `dialout` group.
 
 **Multiple cables / Digirig:** If you have more than one USB-to-serial adapter, set the `FT1000MP_PORT` environment variable to select the right one:
 
 ```bash
-export FT1000MP_PORT=/dev/ttyUSB1   # use everywhere: CLI, library, tests
+export FT1000MP_PORT=/dev/ttyUSB1   # Linux / WSL2
+set FT1000MP_PORT=COM5              # Windows cmd
+$env:FT1000MP_PORT = "COM5"         # Windows PowerShell
 ```
 
-Use the `ports` command inside the CLI (or `python3 -c "from serial.tools.list_ports import comports; [print(p.device, p.description) for p in comports()]"`) to see which `/dev/ttyUSBx` devices are available and identify them by chipset (e.g. "CP2102" vs "CH340").
+Use the `ports` command inside the CLI (or `python -c "from serial.tools.list_ports import comports; [print(p.device, p.description) for p in comports()]"`) to list available serial ports and identify them by chipset (e.g. "CP2102" vs "CH340").
 
 **Digirig (CP210x):** The CP210x chip asserts RTS high by default, which gates the CAT TX line and prevents write commands from reaching the radio (reads still work). You must deassert RTS:
 
@@ -61,7 +69,8 @@ pip install -e ".[test]"    # include pytest for running tests
 ```python
 from ft1000mp import FT1000MP
 
-with FT1000MP(port="/dev/ttyUSB0") as radio:
+# port defaults to COM3 (Windows) or /dev/ttyUSB0 (Linux), or FT1000MP_PORT env var
+with FT1000MP() as radio:
     radio.set_frequency_a(14_195_000)    # 14.195 MHz
     radio.set_mode("USB")
 
@@ -74,8 +83,12 @@ with FT1000MP(port="/dev/ttyUSB0") as radio:
 ## CLI Usage
 
 ```bash
-python cli.py [port]              # default: /dev/ttyUSB0 (or FT1000MP_PORT env var)
+python cli.py                     # use default port (COM3 or /dev/ttyUSB0)
+python cli.py --detect            # auto-detect port by unplugging/replugging cable
+python cli.py COM3                # Windows: explicit port
+python cli.py /dev/ttyUSB0        # Linux: explicit port
 python cli.py --rts off           # Digirig (CP210x) — must deassert RTS
+python cli.py COM3 --rts off      # Windows + Digirig
 python cli.py /dev/ttyUSB1 --rts off --dtr off
 ```
 
@@ -169,8 +182,10 @@ pytest tests/ -v -m "not live"
 Live integration tests (requires an FT-1000MP connected via serial):
 
 ```bash
-pytest tests/ -v -m live                              # default /dev/ttyUSB0
-FT1000MP_PORT=/dev/ttyUSB1 pytest tests/ -v -m live   # test a different cable
+pytest tests/ -v -m live                                # default port
+FT1000MP_PORT=/dev/ttyUSB1 pytest tests/ -v -m live     # Linux: different cable
+set FT1000MP_PORT=COM5 && pytest tests/ -v -m live       # Windows cmd
+$env:FT1000MP_PORT="COM5"; pytest tests/ -v -m live      # Windows PowerShell
 ```
 
 Live tests save and restore radio state automatically. The radio must **not** be transmitting when tests start.

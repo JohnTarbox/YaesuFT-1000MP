@@ -5,6 +5,7 @@ inter-byte delays, reading responses, and retry logic.
 """
 
 import os
+import sys
 import time
 from typing import Optional
 
@@ -13,12 +14,42 @@ import serial
 from .exceptions import CommandTimeoutError, SerialConnectionError
 
 # Default serial parameters for the FT-1000MP
-DEFAULT_PORT = os.environ.get("FT1000MP_PORT", "/dev/ttyUSB0")
+if sys.platform.startswith("win"):
+    _FALLBACK_PORT = "COM3"
+else:
+    _FALLBACK_PORT = "/dev/ttyUSB0"
+
+DEFAULT_PORT = os.environ.get("FT1000MP_PORT", _FALLBACK_PORT)
 DEFAULT_BAUDRATE = 4800
 DEFAULT_TIMEOUT = 0.4            # 400ms read timeout
 DEFAULT_RETRIES = 6
 INTER_BYTE_DELAY = 0.005         # 5ms between bytes
 POST_COMMAND_DELAY = 0.005       # 5ms after full command
+
+
+def detect_port() -> str:
+    """Auto-detect a serial port by asking the user to unplug and replug the cable."""
+    from serial.tools.list_ports import comports
+
+    input("Unplug the USB-to-serial cable and press Enter...")
+    before = {p.device for p in comports()}
+
+    input("Now plug it back in and press Enter...")
+    time.sleep(2)  # give OS time to enumerate the device
+    after = {p.device for p in comports()}
+
+    new_ports = after - before
+    if len(new_ports) == 1:
+        port = new_ports.pop()
+        print(f"Detected: {port}")
+        return port
+    elif len(new_ports) > 1:
+        print(f"Multiple new ports detected: {sorted(new_ports)}")
+        print(f"Using first: {sorted(new_ports)[0]}")
+        return sorted(new_ports)[0]
+    else:
+        print(f"No new port detected. Falling back to {DEFAULT_PORT}")
+        return DEFAULT_PORT
 
 
 class SerialPort:

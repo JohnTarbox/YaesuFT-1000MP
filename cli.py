@@ -7,7 +7,7 @@ import sys
 
 from ft1000mp import FT1000MP, FT1000MPError
 from ft1000mp.protocol import MODE_BY_NAME
-from ft1000mp.serial_port import DEFAULT_PORT
+from ft1000mp.serial_port import DEFAULT_PORT, detect_port
 
 
 def print_help():
@@ -54,8 +54,13 @@ def _env_bool(name: str) -> "bool | None":
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="FT-1000MP CAT Control")
     parser.add_argument(
-        "port", nargs="?", default=DEFAULT_PORT,
-        help=f"serial port (default: {DEFAULT_PORT}, or FT1000MP_PORT env var)",
+        "port", nargs="?", default=None,
+        help=f"serial port — e.g. COM3 (Windows) or /dev/ttyUSB0 (Linux). "
+             f"Default: {DEFAULT_PORT}, or FT1000MP_PORT env var.",
+    )
+    parser.add_argument(
+        "--detect", action="store_true",
+        help="auto-detect the serial port by unplugging/replugging the cable",
     )
     parser.add_argument(
         "--rts", choices=["on", "off"], default=None,
@@ -78,7 +83,12 @@ def _resolve_bool(cli_val: "str | None", env_name: str) -> "bool | None":
 
 def main():
     args = _parse_args()
-    port = args.port
+    if args.port is not None:
+        port = args.port
+    elif args.detect:
+        port = detect_port()
+    else:
+        port = DEFAULT_PORT
     rts = _resolve_bool(args.rts, "FT1000MP_RTS")
     dtr = _resolve_bool(args.dtr, "FT1000MP_DTR")
 
