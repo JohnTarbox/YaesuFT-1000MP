@@ -190,6 +190,10 @@ $env:FT1000MP_PORT="COM5"; pytest tests/ -v -m live      # Windows PowerShell
 
 Live tests save and restore radio state automatically. The radio must **not** be transmitting when tests start.
 
+## Download
+
+Pre-built Windows executables are available on the [Releases](https://github.com/JohnTarbox/YaesuFT-1000MP/releases) page. Download `ft1000mp.exe` and run it directly — no Python installation required.
+
 ## Building a Standalone Executable
 
 You can build a single-file `ft1000mp.exe` (Windows) or `ft1000mp` (Linux) that runs without a Python installation.
