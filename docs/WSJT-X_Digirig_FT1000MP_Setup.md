@@ -1,8 +1,9 @@
 # Digital Modes Setup Guide: Yaesu FT-1000MP with Digirig Mobile
 
 Complete guide for configuring WSJT-X, Fldigi, JS8Call, Winlink (VARA HF),
-VarAC, flrig, and Hamlib rigctld for digital modes on the Yaesu FT-1000MP
-using a Digirig Mobile interface connected to the rear panel PACKET connector.
+VarAC, GridTracker, flrig, and Hamlib rigctld for digital modes on the Yaesu
+FT-1000MP using a Digirig Mobile interface connected to the rear panel PACKET
+connector.
 
 ---
 
@@ -24,11 +25,12 @@ using a Digirig Mobile interface connected to the rear panel PACKET connector.
 14. [VarAC Setup](#varac-setup)
 15. [flrig Rig Control Middleware](#flrig-rig-control-middleware)
 16. [Hamlib rigctld Rig Control Daemon](#hamlib-rigctld-rig-control-daemon)
-17. [Audio Level Calibration](#audio-level-calibration)
-18. [Testing the Setup](#testing-the-setup)
-19. [Operating Tips](#operating-tips)
-20. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
-21. [Troubleshooting](#troubleshooting)
+17. [GridTracker Setup](#gridtracker-setup)
+18. [Audio Level Calibration](#audio-level-calibration)
+19. [Testing the Setup](#testing-the-setup)
+20. [Operating Tips](#operating-tips)
+21. [Backing Up Radio Settings (Clone Mode)](#backing-up-radio-settings-clone-mode)
+22. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1329,6 +1331,153 @@ the batch file.
 
 ---
 
+## GridTracker Setup
+
+[GridTracker](https://gridtracker.org/) is an open-source companion application
+that displays decoded digital mode activity on an interactive world map in real
+time. It plots callsigns by grid square, tracks award progress (DXCC, WAS, grid
+squares, CQ/ITU zones), provides alerts for wanted contacts, and can forward
+logged QSOs to services like LoTW, QRZ, eQSL, and ClubLog.
+
+> **Key point:** GridTracker does **not** control your radio. It receives
+> decoded data from WSJT-X (or JTDX) over a UDP network connection. Your
+> FT-1000MP CAT configuration is entirely handled by WSJT-X -- GridTracker
+> is radio-agnostic.
+
+```
+FT-1000MP <--serial CAT--> WSJT-X <--UDP (port 2237)--> GridTracker
+```
+
+### Installing GridTracker
+
+The current version is **GridTracker 2** (a complete rewrite of the original).
+GridTracker 1 is end-of-life and no longer supported.
+
+- **Windows:** Download the installer from
+  [gridtracker.org/downloads](https://gridtracker.org/downloads/).
+  Run `GridTracker-Installer.exe` and follow the wizard.
+- **macOS:** Download `GridTracker.app`, drag to Applications. First launch:
+  right-click > Open to bypass Gatekeeper.
+- **Linux:**
+  ```bash
+  # Debian/Ubuntu
+  sudo dpkg -i GridTracker2-*.deb
+
+  # Fedora
+  sudo dnf install GridTracker2-*.rpm
+  ```
+
+GridTracker 2 has a built-in auto-updater that checks for new versions.
+
+### Configuring WSJT-X for GridTracker
+
+Three settings in WSJT-X are **required** for GridTracker to work correctly.
+Missing any of them causes lost logs or broken map behavior.
+
+1. Open WSJT-X **File > Settings > Reporting**.
+2. Check **"Prompt me to log QSO"**.
+3. Check **"Clear DX call and grid after logging"**.
+4. Check **"Accept UDP requests"**.
+5. Set **UDP Server** to `127.0.0.1` port `2237`.
+6. Recommended: enable **"PSK Reporter Spotting"** for PSK Reporter integration.
+
+Also verify in the **General** tab:
+- Your **callsign** is entered.
+- Your **grid square** is set to 6 characters (e.g., `FN42ab`, not just `FN42`).
+
+### Configuring GridTracker
+
+1. Launch GridTracker.
+2. Open **Settings > General**.
+3. Verify the IP address is `127.0.0.1` and port is `2237` (must match WSJT-X).
+4. GridTracker should immediately begin displaying decoded stations on the map
+   when WSJT-X is running and decoding.
+
+### Callsign Lookups
+
+Configure in **Settings > Lookups**:
+
+| Service | Notes |
+|---------|-------|
+| **CALLOOK** | US callsigns only, free, no account needed (default) |
+| **QRZ.com** | Requires QRZ account; XML subscription for full API access |
+| **HamQTH.com** | Free; requires HamQTH account credentials |
+| **QRZCQ.com** | Alternative lookup service |
+
+### Logging Integration
+
+GridTracker can forward logged QSOs to external services. Configure in
+**Settings > Logging**:
+
+- **LoTW** -- via TQSL; queues failed uploads and retries automatically
+- **QRZ.com** -- requires API key
+- **eQSL**
+- **ClubLog**
+- **HRDLog.net**
+- **ACLog** (N3FJP)
+- **Log4OM**
+- **N1MM Logger+**
+- **DXKeeper** (DXLab Suite)
+- **Cloudlog / Wavelog**
+
+You can also import existing ADIF log files to populate the map with
+worked/confirmed status for award tracking.
+
+### Alerts
+
+Configure in **Settings > Alerts** to receive audio/visual notifications for:
+
+- **Wanted grids** -- grids you have not worked or confirmed
+- **Wanted DXCC entities** -- new countries
+- **Wanted US states** -- for WAS tracking
+- **Wanted CQ zones / ITU zones**
+- **Specific callsigns** -- buddy list, your own call, etc.
+
+Alerts can be filtered by band/mode, CQ-only stations, minimum signal
+strength, and whether the station includes a grid in their transmission.
+
+### PSK Reporter Integration
+
+GridTracker can display where your signal has been received via
+[PSK Reporter](https://pskreporter.info/):
+
+1. Enable **"PSK Reporter Spotting"** in WSJT-X (Settings > Reporting).
+2. In GridTracker, use the **PSK Spot** button on the Control Panel.
+3. A map of reception reports from the past 24 hours is displayed with
+   path lines from your QTH to each receiving station.
+
+### Running with Multiple Companion Applications
+
+If you need GridTracker **and** another application (like JTAlert or N1MM)
+to both receive WSJT-X data, use UDP multicast:
+
+1. In WSJT-X: set UDP server IP to a multicast address like `224.0.0.1`,
+   keep port `2237`.
+2. In GridTracker: enable **Multicast** in Settings and set the same IP/port.
+3. In the other application: set the same multicast IP/port.
+4. All applications receive the same UDP data simultaneously.
+
+Alternatively, GridTracker can forward UDP data to a second port (default
+`2238`) via its forwarding settings.
+
+### JS8Call and Fldigi Compatibility
+
+- **JS8Call:** GridTracker previously supported JS8Call via a WSJT-X-compatible
+  UDP interface. JS8Call has since removed that interface, so live decode
+  integration is currently unavailable. If JS8Call re-enables it, GridTracker
+  will support it automatically.
+- **Fldigi:** GridTracker does not have native Fldigi integration. You can
+  import Fldigi's ADIF log file manually for map display, but real-time decode
+  plotting is not supported.
+
+### GridTracker with flrig or rigctld
+
+GridTracker does not interact with flrig or rigctld. Whether WSJT-X controls
+the radio directly, through flrig, or through rigctld is transparent to
+GridTracker -- it only sees the UDP data stream from WSJT-X.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -1562,6 +1711,23 @@ If you need to restore factory defaults without a clone backup:
 This is a known issue on some FT-1000MP units with corrupted internal memory.
 Perform a Level 3 reset (hold **29/0** during power-up), then re-enter your
 menu settings.
+
+### GridTracker Shows No Stations on Map
+
+1. **WSJT-X UDP settings:** Go to WSJT-X Settings > Reporting and verify all
+   three checkboxes are enabled: "Prompt me to log QSO", "Clear DX call and
+   grid after logging", and "Accept UDP requests".
+2. **Port match:** WSJT-X UDP port (default `2237`) must match GridTracker's
+   listening port in Settings > General.
+3. **IP match:** Both must use `127.0.0.1` (or the same multicast address if
+   using multicast).
+4. **WSJT-X decoding:** Verify WSJT-X itself is decoding stations (check the
+   decode list). If WSJT-X shows no decodes, the issue is with the radio/audio
+   setup, not GridTracker.
+5. **Firewall:** On Windows, ensure GridTracker has network access through the
+   firewall. Some third-party firewalls (BitDefender, etc.) may block UDP.
+6. **Restart both:** After changing any network settings, restart both WSJT-X
+   and GridTracker.
 
 ### Fldigi Hamlib Initialize Fails (Button Stays Red)
 
@@ -1802,6 +1968,14 @@ JS8CALL VIA RIGCTLD
   PTT:        CAT
   (no serial port config needed)
 
+GRIDTRACKER (Settings > General)
+  IP:         127.0.0.1
+  Port:       2237 (must match WSJT-X UDP port)
+  WSJT-X:     Settings > Reporting > Accept UDP requests
+              UDP Server = 127.0.0.1 port 2237
+              Prompt me to log QSO = Checked
+              Clear DX call and grid = Checked
+
 VARAC (Settings > RIG control & VARA Configuration)
   PTT Method:     CAT
   COM Port:       COMx (Digirig CP210x)
@@ -1859,6 +2033,13 @@ AUDIO LEVELS (all applications)
 - [flrig Help / User Guide](http://www.w1hkj.com/flrig-help/)
 - [flrig with WSJT-X Integration](http://www.w1hkj.com/flrig-help/flrig_with_wsjt-x.html)
 - [flrig Source Code (SourceForge)](https://sourceforge.net/projects/fldigi/files/flrig/)
+
+### GridTracker
+- [GridTracker Website & Downloads](https://gridtracker.org/)
+- [GridTracker Documentation](https://docs.gridtracker.org/)
+- [Getting Started with GridTracker](https://docs.gridtracker.org/latest/Getting-Started.html)
+- [Configuring WSJT-X for GridTracker (Appendix B)](https://docs.gridtracker.org/latest/Appendices/Appendix-B-Configuring-WSJT-X-and-JTDX-for-GridTracker.html)
+- [GridTracker Source Code (GitLab)](https://gitlab.com/gridtracker.org/gridtracker2)
 
 ### Hamlib / rigctld
 - [Hamlib Project (GitHub)](https://github.com/Hamlib/Hamlib)
