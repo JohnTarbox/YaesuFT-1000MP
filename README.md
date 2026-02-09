@@ -40,6 +40,15 @@ FT1000MP_RTS=false python3 -m pytest tests/ -v -m live  # tests
 
 The `FT1000MP_RTS` and `FT1000MP_DTR` env vars accept `true`/`1` or `false`/`0`.
 
+If using **Hamlib** (`rigctl`/`rigctld`, model 209) with a Digirig, the same fix applies:
+
+```bash
+rigctl -m 209 -r /dev/ttyUSB0 --set-conf="rts_state=OFF"
+rigctld -m 209 -r /dev/ttyUSB0 --set-conf="rts_state=OFF" -t 4532
+```
+
+FTDI-based cables are unaffected — only CP210x (and similar chips that assert RTS high on open) need this override.
+
 ## Installation
 
 ```bash
