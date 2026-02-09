@@ -190,6 +190,26 @@ $env:FT1000MP_PORT="COM5"; pytest tests/ -v -m live      # Windows PowerShell
 
 Live tests save and restore radio state automatically. The radio must **not** be transmitting when tests start.
 
+## Building a Standalone Executable
+
+You can build a single-file `ft1000mp.exe` (Windows) or `ft1000mp` (Linux) that runs without a Python installation.
+
+```bash
+pip install -e ".[build]"    # install PyInstaller
+python build.py              # produces dist/ft1000mp or dist/ft1000mp.exe
+```
+
+The resulting executable is in the `dist/` directory:
+
+```bash
+dist\ft1000mp.exe --help               # Windows
+dist\ft1000mp.exe COM3 --rts off       # Windows + Digirig
+./dist/ft1000mp --help                  # Linux
+./dist/ft1000mp /dev/ttyUSB0            # Linux
+```
+
+All CLI flags (`--detect`, `--rts`, `--dtr`) and environment variables (`FT1000MP_PORT`, `FT1000MP_RTS`, `FT1000MP_DTR`) work the same as when running from source.
+
 ## Technical Notes
 
 - **Frequency encoding:** SET commands use little-endian packed BCD (`freq_hz / 10`). Status responses use big-endian binary with `*16/10` scaling — these are two different encodings.
