@@ -16,10 +16,12 @@ connector.
 6. [WSJT-X Audio Settings](#wsjt-x-audio-settings)
 7. [Fldigi Rig Control Settings](#fldigi-rig-control-settings)
 8. [Fldigi Audio Settings](#fldigi-audio-settings)
-9. [Audio Level Calibration](#audio-level-calibration)
-10. [Testing the Setup](#testing-the-setup)
-11. [Operating Tips](#operating-tips)
-12. [Troubleshooting](#troubleshooting)
+9. [JS8Call Radio Settings](#js8call-radio-settings)
+10. [JS8Call Audio Settings](#js8call-audio-settings)
+11. [Audio Level Calibration](#audio-level-calibration)
+12. [Testing the Setup](#testing-the-setup)
+13. [Operating Tips](#operating-tips)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -373,6 +375,139 @@ Fldigi supports many digital modes through the PACKET connector, including:
 
 ---
 
+## JS8Call Radio Settings
+
+JS8Call is a keyboard-to-keyboard messaging mode built on the FT8 engine. It
+enables longer free-text messages, store-and-forward messaging, and automatic
+relay through other stations. The radio and audio configuration is very similar
+to WSJT-X since JS8Call shares the same underlying Hamlib integration.
+
+Open **File > Settings** (or press **F2**), then select the **Radio** tab.
+
+### CAT Control
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| Rig              | **Yaesu FT-1000MP**                |
+| Serial Port      | COM port of CP210x (e.g. COM3)     |
+| Baud Rate        | **4800**                           |
+| Data Bits        | **Default** (8)                    |
+| Stop Bits        | **2**                              |
+| Handshake        | **None**                           |
+
+> **Note:** JS8Call uses Hamlib for CAT control, the same library as WSJT-X.
+> The rig selection dropdown contains the same entries. Select the appropriate
+> FT-1000MP variant for your radio:
+>
+> | Radio                    | Selection                         |
+> |--------------------------|-----------------------------------|
+> | FT-1000MP (original)     | **Yaesu FT-1000MP**               |
+> | Mark V FT-1000MP         | **Yaesu MARK-V FT-1000MP**       |
+> | Mark V Field FT-1000MP   | **Yaesu MARK-V Field FT-1000MP** |
+
+### PTT Method
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| PTT Method       | **RTS**                            |
+| Port             | COM port of CP210x (same as CAT)   |
+| Transmit Delay   | **0.2** seconds                    |
+
+> The Digirig routes the RTS signal to the DIN-5 PTT line. This is the same
+> PTT mechanism as WSJT-X.
+
+### Split Operation
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| Split Operation  | **Fake It**                        |
+
+> "Fake It" works well with the FT-1000MP. JS8Call will shift the VFO
+> frequency as needed during transmit to keep the audio tone in the optimal
+> range.
+
+### Linux Serial Port
+
+On Linux, use the device path instead of COM port:
+
+| Setting          | Value                              |
+|------------------|------------------------------------|
+| Serial Port      | **/dev/ttyUSB0**                   |
+
+### CP210x RTS Note
+
+The same CP210x RTS issue applies to JS8Call. If CAT reads work but writes
+(frequency changes, mode changes) are silently ignored, ensure that RTS is not
+being asserted high by the serial driver. JS8Call may not have an explicit
+"Force RTS Off" option like WSJT-X. If you encounter this problem:
+
+1. Check if JS8Call has RTS/DTR control options in the radio settings.
+2. Alternatively, use a small utility to set the serial port RTS state before
+   launching JS8Call.
+3. On Linux, `stty -F /dev/ttyUSB0 -crtscts` can disable hardware flow control.
+
+---
+
+## JS8Call Audio Settings
+
+In **File > Settings**, select the **Audio** tab.
+
+### Soundcard Selection
+
+| Setting            | Value                                          |
+|--------------------|------------------------------------------------|
+| Input (Capture)    | **USB Audio Device** (or "Digirig" if renamed) |
+| Output (Playback)  | **USB Audio Device** (or "Digirig" if renamed) |
+
+On Linux, select the appropriate ALSA or PulseAudio device.
+
+> **Important:** Set the **Notification Soundcard** to your computer's built-in
+> speakers or headphones -- not the Digirig. This prevents notification sounds
+> from being transmitted over the air.
+
+### JS8Call Speed Modes
+
+JS8Call supports four transmission speeds. All use USB mode through the PACKET
+connector:
+
+| Speed   | Bandwidth | TX Period | Effective Speed | Best For                        |
+|---------|-----------|-----------|-----------------|----------------------------------|
+| Slow    | 25 Hz     | 30 sec    | ~8 WPM          | Weak signals, difficult paths    |
+| Normal  | 50 Hz     | 15 sec    | ~16 WPM         | Default; balanced range/speed    |
+| Fast    | 80 Hz     | 10 sec    | ~24 WPM         | Good signal conditions           |
+| Turbo   | 160 Hz    | 6 sec     | ~40 WPM         | Strong signals, local nets       |
+
+> **Tip:** Start QSOs in **Normal** mode. Switch to Slow for weak/marginal
+> signals or Fast/Turbo when conditions allow. You can enable multi-speed
+> decoding via the **Mode** menu to decode all speeds simultaneously.
+
+### JS8Call Frequencies
+
+Default calling frequencies (dial frequency, USB):
+
+| Band | Frequency  |
+|------|------------|
+| 160m | 1.842 MHz  |
+| 80m  | 3.578 MHz  |
+| 40m  | 7.078 MHz  |
+| 30m  | 10.130 MHz |
+| 20m  | 14.078 MHz |
+| 17m  | 18.104 MHz |
+| 15m  | 21.078 MHz |
+| 12m  | 24.922 MHz |
+| 10m  | 28.078 MHz |
+
+Most activity is on **40m** (evening/night) and **20m** (daytime).
+
+### Time Synchronization
+
+Like FT8, JS8Call requires accurate system time (within ~2 seconds). See the
+[time synchronization instructions](#step-5-verify-time-synchronization) in the
+Testing section. JS8Call also has a built-in **Timing** tab (enable via
+**View > Show Waterfall Controls**) that lets you fine-tune clock drift.
+
+---
+
 ## Audio Level Calibration
 
 Proper audio levels are critical for digital modes. Incorrect levels cause
@@ -475,7 +610,7 @@ Common FT8 frequencies (dial frequency, USB):
 
 ### Power
 
-FT8 is very efficient. Typical power levels:
+FT8 and JS8Call are very efficient. Typical power levels:
 
 - **25-50W** for general operation
 - **5-10W** for QRP
@@ -484,13 +619,13 @@ FT8 is very efficient. Typical power levels:
 
 ### Duty Cycle
 
-FT8 is a 100% duty cycle mode during transmit. The FT-1000MP handles this well,
-but avoid extended continuous transmit sessions. The radio will get warm during
-prolonged operation.
+FT8, JS8Call, and PSK modes are 100% duty cycle during transmit. The FT-1000MP
+handles this well, but avoid extended continuous transmit sessions. The radio
+will get warm during prolonged operation.
 
 ### Mode Selection
 
-- WSJT-X handles the modulation/demodulation in software.
+- WSJT-X, JS8Call, and Fldigi all handle modulation/demodulation in software.
 - The radio just needs to be in **PKT USER** mode (which provides USB passthrough).
 - Do **not** change the radio's mode while WSJT-X is running.
 
@@ -612,10 +747,27 @@ FLDIGI AUDIO (Soundcard > Devices)
   Capture:    USB Audio Device (Digirig)
   Playback:   USB Audio Device (Digirig)
 
-AUDIO LEVELS
+JS8CALL RADIO TAB
+  Rig:        Yaesu FT-1000MP
+  Serial:     COMx / /dev/ttyUSB0
+  Baud:       4800
+  Data Bits:  Default (8)
+  Stop Bits:  2
+  Handshake:  None
+  PTT:        RTS (same port)
+  TX Delay:   0.2s
+  Split:      Fake It
+
+JS8CALL AUDIO TAB
+  Input:      USB Audio Device (Digirig)
+  Output:     USB Audio Device (Digirig)
+  Notify:     Built-in speakers (NOT Digirig)
+
+AUDIO LEVELS (all applications)
   OS Recording:   Start at 20%, adjust to stay below red
   OS Playback:    ~80%
   WSJT-X Pwr:     25-50%, adjust for zero ALC
+  JS8Call Pwr:     25-50%, adjust for zero ALC
   Fldigi TX:      ~50%, adjust for zero ALC
   MIC GAIN:       ~10 o'clock
 ```
@@ -640,6 +792,9 @@ AUDIO LEVELS
 
 ### Software
 - [WSJT-X User Guide](https://wsjt.sourceforge.io/wsjtx-doc/wsjtx-main-2.6.1.html)
+- [JS8Call Website](http://js8call.com/)
+- [JS8Call Signal ID Wiki (Frequencies & Specs)](https://www.sigidwiki.com/wiki/JS8)
+- [JS8Call Overview Presentation (CRHRC)](https://technet.crhrc.org/wp-content/uploads/2025/03/JS8Call-CRHRC-Presentation.pdf)
 - [Fldigi Users Manual: Rig Control Configuration](http://www.w1hkj.com/FldigiHelp/rig_config_page.html)
 - [Fldigi Beginners' Guide](http://www.w1hkj.com/beginners.html)
 - [Fldigi XML Rig Definitions (FT-1000MP)](https://sourceforge.net/projects/fldigi/files/xmls/yaesu/)
