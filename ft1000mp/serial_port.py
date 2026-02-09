@@ -4,6 +4,7 @@ Handles opening the serial port, writing commands byte-by-byte with
 inter-byte delays, reading responses, and retry logic.
 """
 
+import os
 import time
 from typing import Optional
 
@@ -12,7 +13,7 @@ import serial
 from .exceptions import CommandTimeoutError, SerialConnectionError
 
 # Default serial parameters for the FT-1000MP
-DEFAULT_PORT = "/dev/ttyUSB0"    # USB serial adapter via usbipd
+DEFAULT_PORT = os.environ.get("FT1000MP_PORT", "/dev/ttyUSB0")
 DEFAULT_BAUDRATE = 4800
 DEFAULT_TIMEOUT = 0.4            # 400ms read timeout
 DEFAULT_RETRIES = 6

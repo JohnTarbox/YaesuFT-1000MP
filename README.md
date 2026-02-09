@@ -22,6 +22,14 @@ Python CAT control library and interactive CLI for the Yaesu FT-1000MP HF transc
 
 **WSL2 note:** USB devices must be attached via [usbipd-win](https://github.com/dorssel/usbipd-win) before they appear in the Linux guest. The adapter typically shows up as `/dev/ttyUSB0`. Your user must be in the `dialout` group (`sudo usermod -aG dialout $USER`).
 
+**Multiple cables / Digirig:** If you have more than one USB-to-serial adapter, set the `FT1000MP_PORT` environment variable to select the right one:
+
+```bash
+export FT1000MP_PORT=/dev/ttyUSB1   # use everywhere: CLI, library, tests
+```
+
+Use the `ports` command inside the CLI (or `python3 -c "from serial.tools.list_ports import comports; [print(p.device, p.description) for p in comports()]"`) to see which `/dev/ttyUSBx` devices are available and identify them by chipset (e.g. "CP2102" vs "CH340").
+
 ## Installation
 
 ```bash
@@ -47,7 +55,7 @@ with FT1000MP(port="/dev/ttyUSB0") as radio:
 ## CLI Usage
 
 ```bash
-python cli.py [port]        # default: /dev/ttyUSB0
+python cli.py [port]        # default: /dev/ttyUSB0 (or FT1000MP_PORT env var)
 ```
 
 | Command | Description |
@@ -68,6 +76,7 @@ python cli.py [port]        # default: /dev/ttyUSB0
 | `mem <1-99>` | Recall memory channel |
 | `vfo2mem` | Store VFO to memory |
 | `mem2vfo` | Recall memory to VFO |
+| `ports` | List available serial ports |
 | `help` | Show command help |
 | `quit` | Exit |
 
@@ -136,10 +145,11 @@ Unit tests (no hardware required):
 pytest tests/ -v -m "not live"
 ```
 
-Live integration tests (requires an FT-1000MP connected on `/dev/ttyUSB0`):
+Live integration tests (requires an FT-1000MP connected via serial):
 
 ```bash
-pytest tests/ -v -m live
+pytest tests/ -v -m live                              # default /dev/ttyUSB0
+FT1000MP_PORT=/dev/ttyUSB1 pytest tests/ -v -m live   # test a different cable
 ```
 
 Live tests save and restore radio state automatically. The radio must **not** be transmitting when tests start.

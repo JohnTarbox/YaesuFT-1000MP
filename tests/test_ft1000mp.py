@@ -1,7 +1,8 @@
 """Comprehensive test suite for FT-1000MP CAT control library.
 
 Unit tests run without hardware. Live integration tests (marked @pytest.mark.live)
-require a radio on /dev/ttyUSB0.
+require a radio connected via serial. Set FT1000MP_PORT to override
+the default /dev/ttyUSB0.
 
 Run all tests:       pytest tests/ -v
 Unit tests only:     pytest tests/ -v -m "not live"
@@ -42,7 +43,7 @@ from ft1000mp.protocol import (
     cmd_vfo_a_to_b,
     cmd_vfo_to_memory,
 )
-from ft1000mp.serial_port import SerialPort
+from ft1000mp.serial_port import DEFAULT_PORT, SerialPort
 from ft1000mp.transceiver import (
     FREQ_MAX_HZ,
     FREQ_MIN_HZ,
@@ -611,7 +612,7 @@ class TestErrorHandling:
 @pytest.fixture(scope="session")
 def radio():
     """Session-scoped fixture: open port once for all live tests."""
-    r = FT1000MP(port="/dev/ttyUSB0")
+    r = FT1000MP(port=DEFAULT_PORT)
     r.open()
     radio_pause()
     yield r

@@ -5,6 +5,7 @@ import sys
 
 from ft1000mp import FT1000MP, FT1000MPError
 from ft1000mp.protocol import MODE_BY_NAME
+from ft1000mp.serial_port import DEFAULT_PORT
 
 
 def print_help():
@@ -27,6 +28,7 @@ FT-1000MP CAT Control Commands:
   mem <1-99>        Recall memory channel
   vfo2mem <1-99>    Store VFO to memory channel
   mem2vfo <1-99>    Recall memory channel to VFO
+  ports             List available serial ports
   help              Show this help
   quit              Exit
 """
@@ -40,7 +42,7 @@ def format_freq(hz: int) -> str:
 
 
 def main():
-    port = sys.argv[1] if len(sys.argv) > 1 else "/dev/ttyUSB0"
+    port = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PORT
 
     print(f"FT-1000MP CAT Control — connecting on {port}")
     try:
@@ -201,6 +203,16 @@ def main():
                         channel = int(args[0])
                         radio.memory_to_vfo(channel)
                         print(f"  Memory channel {channel} recalled to VFO")
+
+                elif cmd == "ports":
+                    from serial.tools.list_ports import comports
+                    ports_list = sorted(comports(), key=lambda p: p.device)
+                    if not ports_list:
+                        print("  No serial ports detected.")
+                    else:
+                        for p in ports_list:
+                            marker = " *" if p.device == port else ""
+                            print(f"  {p.device}  {p.description}{marker}")
 
                 else:
                     print(f"  Unknown command: {cmd}. Type 'help' for commands.")

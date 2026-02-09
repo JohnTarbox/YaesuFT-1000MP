@@ -38,7 +38,7 @@ from .protocol import (
     cmd_vfo_a_to_b,
     cmd_vfo_to_memory,
 )
-from .serial_port import SerialPort
+from .serial_port import DEFAULT_PORT, SerialPort
 
 # Frequency limits for the FT-1000MP
 FREQ_MIN_HZ = 100_000       # 100 kHz
@@ -105,7 +105,7 @@ def _parse_vfo_block(data: bytes) -> VFOStatus:
 class FT1000MP:
     """High-level interface to the Yaesu FT-1000MP transceiver."""
 
-    def __init__(self, port: str = "/dev/ttyUSB0"):
+    def __init__(self, port: str = DEFAULT_PORT):
         self._serial = SerialPort(port=port)
 
     # -- context manager ---------------------------------------------------
