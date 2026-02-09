@@ -2097,7 +2097,7 @@ menu settings.
 
 ```
 RADIO SETTINGS
-  Menu 8-6:  PAc-Lo / 0 / 1.500 / 453.500 / 1.500 / 453.500 / 0 / oFF
+  Menu 8-6:  PAc-Lo / 0 / 1.750 / 453.250 / 1.750 / 453.250 / 0 / oFF
   Menu 6-1:  RTTY polarity = reversed
   Menu 3-0:  F-diSPly = cArriEr  (optional)
   Activate:  Press USER button (USER mode)
@@ -2112,7 +2112,9 @@ WSJT-X RADIO TAB
   Handshake:  None
   RTS:        Off (forced)
   DTR:        Off (forced)
-  PTT:        RTS (same port)
+  PTT:        CAT
+  Mode:       None
+  TX Audio:   Rear/Data
   Split:      Fake It
 
 WSJT-X AUDIO TAB
