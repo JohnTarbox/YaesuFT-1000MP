@@ -2,7 +2,9 @@
 
 Every CAT command is exactly 5 bytes: [P1][P2][P3][P4][OpCode].
 
-Frequency encoding uses big-endian binary with *16/10 scaling (NOT packed BCD).
+Frequency encoding is asymmetric:
+  SET commands (host → radio): little-endian packed BCD (freq_hz / 10)
+  Status responses (radio → host): big-endian binary with *16/10 scaling
 """
 
 from enum import IntEnum

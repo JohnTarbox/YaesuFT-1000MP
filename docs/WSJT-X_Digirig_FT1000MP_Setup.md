@@ -251,12 +251,14 @@ Open WSJT-X and go to **File > Settings** (or **F2**), then the **Radio** tab.
 
 | Setting          | Value                              |
 |------------------|------------------------------------|
-| PTT Method       | **RTS**                            |
-| Port             | COM port of CP210x **(same port)** |
+| PTT Method       | **CAT**                            |
 
-> PTT is handled through the DIN-5 PACKET connector (pin 3). The Digirig routes
-> the RTS signal from its serial port to the PTT line on the TRRS audio cable.
-> If WSJT-X offers a separate PTT port, use the same COM port as CAT.
+> PTT via CAT sends a software command to key the transmitter. This is the
+> simplest method and does not require a separate PTT port.
+>
+> **Alternative:** Set PTT Method to **RTS** (same COM port as CAT). The
+> Digirig routes the RTS signal from its serial port to the PTT line on the
+> TRRS audio cable via the DIN-5 PACKET connector (pin 3).
 
 ### Mode
 
